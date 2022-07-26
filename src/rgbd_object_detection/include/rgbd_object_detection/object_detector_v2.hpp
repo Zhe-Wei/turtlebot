@@ -94,11 +94,12 @@ public:
                                             my_camera_(nh),
                                             tfListener_(tfBuffer_)
     {
-        
+        std::cout << "ObjectDetectorV2 ~~" << std::endl;
         objects_pub_ = nh.advertise<sensor_msgs::PointCloud2>("objects_clouds", 10);
         clustered_pub_ = nh.advertise<sensor_msgs::PointCloud2>("clustered_clouds", 10);
 
-        // message_filters::TimeSynchronizer<sensor_msgs::Image, rgbd_object_detection::MaskrcnnResult> sync(depth_sub_, result_sub_, 10);
+        // message_filters::TimeSynchronizer<sensor_msgs::Image, rgbd_object_detection::MaskrcnnResult> sync_(raw_pc_sub_, result_sub_, 10);
+        message_filters::TimeSynchronizer<sensor_msgs::PointCloud2, rgbd_object_detection::MaskrcnnResult> sync_(raw_pc_sub_, result_sub_, 10);
 
         // since realsense camera has syncronized the time stamp, use ExactTime config here
         sync_.registerCallback(boost::bind(&ObjectDetectorV2::mask_callback, this, _1, _2));

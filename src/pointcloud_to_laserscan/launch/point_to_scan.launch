@@ -1,5 +1,5 @@
 <launch>
-
+    <rosparam command="load" file="$(find rgbd_object_detection)/config/realsense.yaml" />
     <node pkg="pointcloud_to_laserscan" type="pointcloud_to_laserscan_node" name="points2scan" >
         <remap from="cloud_in" to="velodyne_points"/>
         <remap from="scan" to="front/scan"/>
@@ -10,6 +10,8 @@
     </node>
 
     <node pkg="tf" type="static_transform_publisher" name="base2velodyne" args="0 0 1.4 0 0 0 /base_link /velodyne 100"/>
+    <!-- Adjusted extrinsic from lidar to camera_link -->
+    <node pkg="tf" type="static_transform_publisher" name="velodyne2camera" args="-0.15 0 0.95 0 0.349066 0 velodyne camera_link 100"/> 
     <!-- <node pkg="tf" type="static_transform_publisher" name="velodyne2front_laser" args="0 0 0 0 0 0 /velodyne /front_laser 100"/> -->
 
 </launch>

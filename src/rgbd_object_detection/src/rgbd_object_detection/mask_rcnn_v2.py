@@ -176,9 +176,6 @@ class MaskRCNN:
         try:
             self.result_pub_.publish(self.bridge_.cv2_to_imgmsg(out.get_image()[:, :, ::-1], "bgr8"))
             print('saved~')
-            # cv_image = self.bridge_.cv2_to_imgmsg(out.get_image()[:, :, ::-1], "bgr8")
-            # print(out)
-            # print(type(out))
             cv2.imwrite('/home/ubuntu/Desktop/'+ str(time.time()) +'_test.jpg', out.get_image()[:, :, ::-1])
         except CvBridgeError as e:
             print(e)
