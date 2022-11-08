@@ -171,19 +171,19 @@ void IrisPositionForword(vector<vector<float>> &q_f, vector<int> &detected_id) 	
 				forward_pos_error.push_back( { abs(odomX-forward_pos[num][0]), abs(odomY-forward_pos[num][1]), abs(odomZ-forward_pos[num][2]) } );
 
 				break;
-			case 2:   // third forward pose sensor
-				// Message of forward camera
-                cout << "case 2" << endl;
-				Calibration_f3.header = header_f[num];
-				Calibration_f3.header.frame_id = "turtlebot02/odom";
+			// case 2:   // third forward pose sensor
+			// 	// Message of forward camera
+            //     cout << "case 2" << endl;
+			// 	Calibration_f3.header = header_f[num];
+			// 	Calibration_f3.header.frame_id = "turtlebot02/odom";
 
-				Calibration_f3.pose.pose.position.x = - forward_pos[num][2] + forward_id[detected_id[num]].at(0);
-				Calibration_f3.pose.pose.position.y = forward_pos[num][1] + forward_id[detected_id[num]].at(1);
-				Calibration_f3.pose.pose.position.z = forward_pos[num][0] + forward_id[detected_id[num]].at(2);
+			// 	Calibration_f3.pose.pose.position.x = - forward_pos[num][2] + forward_id[detected_id[num]].at(0);
+			// 	Calibration_f3.pose.pose.position.y = forward_pos[num][1] + forward_id[detected_id[num]].at(1);
+			// 	Calibration_f3.pose.pose.position.z = forward_pos[num][0] + forward_id[detected_id[num]].at(2);
 
-				forward_pos_error.push_back( { abs(odomX-forward_pos[num][0]), abs(odomY-forward_pos[num][1]), abs(odomZ-forward_pos[num][2]) } );
+			// 	forward_pos_error.push_back( { abs(odomX-forward_pos[num][0]), abs(odomY-forward_pos[num][1]), abs(odomZ-forward_pos[num][2]) } );
 
-				break;
+			// 	break;
 			default:
 				break;
 		}
