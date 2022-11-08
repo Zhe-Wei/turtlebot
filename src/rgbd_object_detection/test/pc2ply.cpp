@@ -32,7 +32,7 @@ void pointcloud2ply(const sensor_msgs::PointCloud2 &msg)
     static int id = 0;
     std::string file_name = std::to_string(id) + ".ply";
     pcl::io::savePLYFileASCII(file_name, cloud);
-    std::cout << "Saved ply file id: " << id << std::endl;
+    // std::cout << "Saved ply file id: " << id << std::endl;
     id++;
 }
 

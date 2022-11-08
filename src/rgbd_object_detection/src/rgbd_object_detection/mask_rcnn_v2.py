@@ -144,14 +144,14 @@ class MaskRCNN:
         # Read the image
         try:
             cv_image = self.bridge_.imgmsg_to_cv2(self.latest_image_, "bgr8")
-            print(cv_image.shape)
+            # print(cv_image.shape)
         except CvBridgeError as e:
             print(e)
             return
         # print(self.latest_image_)
-        print(self.latest_image_.header)
+        # print(self.latest_image_.header)
         header_copy = copy.deepcopy(self.latest_image_.header)
-        print(header_copy)
+        # print(header_copy)
         self.data_lock_.release()
 
         # (rows, cols, channels) = self.latest_image_.shape
@@ -175,8 +175,8 @@ class MaskRCNN:
         out = visual.draw_instance_predictions(outputs_cpu)
         try:
             self.result_pub_.publish(self.bridge_.cv2_to_imgmsg(out.get_image()[:, :, ::-1], "bgr8"))
-            print('saved~')
-            cv2.imwrite('/home/ubuntu/Desktop/'+ str(time.time()) +'_test.jpg', out.get_image()[:, :, ::-1])
+            # print('saved~')
+            # cv2.imwrite('/home/ubuntu/Desktop/'+ str(time.time()) +'_test.jpg', out.get_image()[:, :, ::-1])
         except CvBridgeError as e:
             print(e)
 

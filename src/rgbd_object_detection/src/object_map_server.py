@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python3
 
 ''' This node maintains an object-level map
 
@@ -24,7 +24,6 @@ import sys
 import copy
 # use shapely for IoU calculation of polygons
 import shapely.geometry
-
 from scipy.optimize import linear_sum_assignment
 from scipy.spatial import ConvexHull
 

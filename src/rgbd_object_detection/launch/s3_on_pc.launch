@@ -2,7 +2,7 @@
 
     <!-- People detection and tracking -->
     <!-- arguments -->
-    <arg name="nodelet_manager" default="velodyne_nodelet_manager" />
+    <arg name="nodelet_manager" default="velodyne_nodelet_manager_1" />
     <node pkg="nodelet" type="nodelet" name="$(arg nodelet_manager)" args="manager" output="screen"/>
 
     <node pkg="nodelet" type="nodelet" name="hdl_people_detection_nodelet" args="load hdl_people_tracking/HdlPeopleDetectionNodelet $(arg nodelet_manager)">

@@ -45,6 +45,11 @@ void ObjectDetectorV2::extract_by_mask(PointCloud::Ptr input_pc,
                                        std::vector<PointCloud::Ptr> &object_pc_list,
                                        const PointCloudProjection &cloud_2d)
 {
+    // input_pc: pcl點雲(x,y,z)
+    // mask: opencv格式的遮罩 (0 or 255)
+    // object_pc_list: 收集"遮罩中物件框框內"的pcl點雲
+    // cloud_2d: px,py(px,py為pcl點雲打在影像的二維座標)+pcl點雲x座標(當作影像深度)
+
     PointCloud::Ptr current_cloud(new PointCloud);
 
     for (size_t i = 0; i < input_pc->points.size(); i++)
@@ -72,13 +77,13 @@ void ObjectDetectorV2::extract_by_mask(PointCloud::Ptr input_pc,
 bool ObjectDetectorV2::is_valid_object(PointCloud::Ptr in_cloud)
 {
     // calculate centroid distance to origin
-    Eigen::Vector4f xyz_centroid;
+    Eigen::Vector4f xyz_centroid; //存放质心坐标 Vector4f單位為浮點數的4*1向量
 
     // Estimate the XYZ centroid
-    pcl::compute3DCentroid(*in_cloud, xyz_centroid);
+    pcl::compute3DCentroid(*in_cloud, xyz_centroid); //计算点云质心
 
-    float distance = sqrt(pow(xyz_centroid[0], 2) + pow(xyz_centroid[1], 2));
-    // std::cout << "Distance is " << distance << std::endl;
+    float distance = sqrt(pow(xyz_centroid[0], 2) + pow(xyz_centroid[1], 2)); // 物體與原點的距離 
+    // std::cout << "Distance is " << distance << "\n" << xyz_centroid << std::endl;
 
     if (distance > max_distance_)
     {
@@ -86,11 +91,11 @@ bool ObjectDetectorV2::is_valid_object(PointCloud::Ptr in_cloud)
     }
 
     // Do PCA and check the dimension ratio
-    Eigen::Matrix3f covariance;
-    pcl::computeCovarianceMatrixNormalized(*in_cloud, xyz_centroid, covariance);
-    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> eigen_solver(covariance, Eigen::ComputeEigenvectors);
-    Eigen::Matrix3f eigenVectorsPCA = eigen_solver.eigenvectors();
-    eigenVectorsPCA.col(2) = eigenVectorsPCA.col(0).cross(eigenVectorsPCA.col(1));
+    Eigen::Matrix3f covariance; //创建一个3行3列的矩阵，里面每个元素均为float类型
+    pcl::computeCovarianceMatrixNormalized(*in_cloud, xyz_centroid, covariance); //计算目标点云协方差矩阵
+    Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> eigen_solver(covariance, Eigen::ComputeEigenvectors); //构造一个计算特定矩阵的类对象
+    Eigen::Matrix3f eigenVectorsPCA = eigen_solver.eigenvectors(); //计算特征向量
+    eigenVectorsPCA.col(2) = eigenVectorsPCA.col(0).cross(eigenVectorsPCA.col(1)); 
 
     // Transform the original cloud to the origin where the principal components correspond to the axes.
     Eigen::Matrix4f projectionTransform(Eigen::Matrix4f::Identity());
@@ -125,11 +130,12 @@ void ObjectDetectorV2::find_largest_cluster(PointCloud::Ptr object_cloud,
     std::vector<pcl::PointIndices> object_indices;
 
     pcl::EuclideanClusterExtraction<PointT> euclid;
-    euclid.setInputCloud(object_cloud);
-    euclid.setClusterTolerance(cluster_tolerance);
-    euclid.setMinClusterSize(min_cluster_size);
-    euclid.setMaxClusterSize(max_cluster_size);
-    euclid.extract(object_indices);
+    euclid.setInputCloud(object_cloud); //"遮罩中物件框框內"的pcl點雲(x,y,0)
+    euclid.setClusterTolerance(cluster_tolerance); //设置近邻搜索的半径 (0.2)
+    euclid.setMinClusterSize(min_cluster_size); //设置最小聚类点数 (50)
+    euclid.setMaxClusterSize(max_cluster_size); //设置最大聚类点数 (307200)
+    euclid.extract(object_indices);//从点云中提取聚类，并将点云团保存在object_indices中
+                                   //迭代访问点云索引object_indices，直至分割出所有聚类
 
     // clusters point cloud
     std::vector<PointCloud::Ptr> clusters;
@@ -147,7 +153,7 @@ void ObjectDetectorV2::find_largest_cluster(PointCloud::Ptr object_cloud,
         extract.filter(*new_cloud);
 
         // check if this cloud is valid
-        if (is_valid_object(new_cloud) == false)
+        if (is_valid_object(new_cloud) == false) //之後讀 裡面好像利用PCA查看物體的比例，然後將合法的回傳True，反之False
         {
             // std::cout << "Excluded" << std::endl;
             continue;
@@ -190,7 +196,7 @@ void ObjectDetectorV2::find_largest_cluster(PointCloud::Ptr object_cloud,
         return;
     }
 
-    clusters[max_cluster_id]->swap(*object_cloud);
+    clusters[max_cluster_id]->swap(*object_cloud); //僅保存最大的cluster點雲並替換掉obgect_cloud (object cloud只包含最大的cluster的點)
 
     return;
 }
@@ -202,7 +208,7 @@ void ObjectDetectorV2::project2image_plane(PointCloud::Ptr in_cloud, PointCloudP
     {
         Eigen::Matrix<double, 3, 1> p_l(in_cloud->points[i].x,
                                         in_cloud->points[i].y,
-                                        in_cloud->points[i].z);
+                                        in_cloud->points[i].z);                               
         Eigen::Matrix<int, 2, 1> p_s = my_camera_.lidar2pixel(p_l); // point position in sensor coordinate
 
         out_cloud_2d.points_2d.push_back(p_s);
@@ -220,6 +226,7 @@ void ObjectDetectorV2::cloud_2d(PointCloud::Ptr in_cloud)
     }
 }
 
+
 PointCloud::Ptr ObjectDetectorV2::find_2D_convex_hull(PointCloud::Ptr in_cloud)
 {
 
@@ -228,8 +235,8 @@ PointCloud::Ptr ObjectDetectorV2::find_2D_convex_hull(PointCloud::Ptr in_cloud)
     chull.setInputCloud(in_cloud);
     chull.reconstruct(*convex_hull);
 
-    // std::cout << "Convex hull has: " << convex_hull->size()
-    //           << " data points." << std::endl;
+    std::cout << "Convex hull has: " << convex_hull->size()
+              << " data points." << std::endl;
 
     return convex_hull;
 }
@@ -311,6 +318,7 @@ void ObjectDetectorV2::pcl_image_overlap(const PointCloudProjection &projected_c
     int w = image.size().width;
     int h = image.size().height;
 
+
     float min_d, max_d;
     min_d = max_d = projected_cloud.depth[0];
     for (int i = 1; i < projected_cloud.depth.size(); i++)
@@ -320,6 +328,7 @@ void ObjectDetectorV2::pcl_image_overlap(const PointCloudProjection &projected_c
         min_d = di < min_d ? di : min_d;
     }
     float wid_d = max_d - min_d;
+
 
     for (int i = 0; i < projected_cloud.points_2d.size(); i++)
     {
@@ -331,7 +340,11 @@ void ObjectDetectorV2::pcl_image_overlap(const PointCloudProjection &projected_c
         float distance = projected_cloud.depth[i];
 
         int colorid = wid_d ? ((distance - min_d) * 255 / wid_d) : 128;
-        cv::Vec3b color = colormap.at<cv::Vec3b>(colorid);
+        // std::cout << colorid << std::endl;
+        cv::Vec3b color = colormap.at<cv::Vec3b>(colorid); // colormap是一個(256*1) COLORMAP_JET 形式的彩色圖，再由color_id 去查到對應的顏色
+        // std::cout << color << std::endl;
+        
+        
         int r = color[0];
         int g = color[1];
         int b = color[2];
@@ -421,6 +434,7 @@ void ObjectDetectorV2::mask_callback(const sensor_msgs::PointCloud2ConstPtr& raw
 
     // visualization
     PointCloud::Ptr objects_visual(new PointCloud);
+    // std::cout << "objects_clouds.size()" << objects_clouds.size() << std::endl;
     for (int i = 0; i < objects_clouds.size(); i++)
     {
         *objects_visual += *(objects_clouds[i]);
@@ -430,6 +444,7 @@ void ObjectDetectorV2::mask_callback(const sensor_msgs::PointCloud2ConstPtr& raw
 
     objects_visual_msg.header.stamp = ros::Time::now();
     objects_visual_msg.header.frame_id = "velodyne";
+    // std::cout << objects_visual_msg << std::endl;
     objects_pub_.publish(objects_visual_msg);
 
     visualization_msgs::MarkerArray polygon_array;
@@ -444,7 +459,7 @@ void ObjectDetectorV2::mask_callback(const sensor_msgs::PointCloud2ConstPtr& raw
 
         cloud_2d(each_object);
         find_largest_cluster(each_object);
-
+        std::cout << "each_object->points.size()" << each_object->points.size() << std::endl;
         // if there is no clusters, ignore this object
         if (each_object->points.size() <= 2)
         {

@@ -22,10 +22,12 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <Eigen/Dense>
+#include <iostream>
 
 namespace disinfection_robot
 {
 
+// -1.571, -0.000, -1.571
 Eigen::Affine3d create_rotation_matrix(double ax, double ay, double az)
 {
     Eigen::Affine3d rx =
@@ -34,6 +36,7 @@ Eigen::Affine3d create_rotation_matrix(double ax, double ay, double az)
         Eigen::Affine3d(Eigen::AngleAxisd(ay, Eigen::Vector3d(0, 1, 0)));
     Eigen::Affine3d rz =
         Eigen::Affine3d(Eigen::AngleAxisd(az, Eigen::Vector3d(0, 0, 1)));
+
     return rz * ry * rx;
 }
 
@@ -68,10 +71,15 @@ public:
         std::vector<double> t_lc;
         nh.getParam("/rpy_lc", rpy_lc);
         nh.getParam("/t_lc", t_lc);
+
         Eigen::Affine3d Rot_lc = create_rotation_matrix(rpy_lc[0], rpy_lc[1], rpy_lc[2]);
         Eigen::Affine3d Trans_lc(Eigen::Translation3d(Eigen::Vector3d(t_lc[0], t_lc[1], t_lc[2])));
+        // Eigen::Matrix4d m = Trans_lc.matrix();
+        // std::cout << "Trans_lc" << std::endl;
+        // std::cout << m << std::endl;
         // transformation from camera link to lidar
         Eigen::Affine3d T_cl = (Trans_lc * Rot_lc).inverse();
+        // Eigen::Matrix4d T_cl = (Trans_lc * Rot_lc).inverse().matrix();
 
         std::vector<double> rpy_c2co;
         std::vector<double> t_c2co;
@@ -81,7 +89,11 @@ public:
         Eigen::Affine3d Trans_c2co(Eigen::Translation3d(Eigen::Vector3d(t_c2co[0], t_c2co[1], t_c2co[2])));
         // transformation from camera optical frame to camera link
         Eigen::Affine3d T_co2c = (Trans_c2co * Rot_c2co).inverse();
+        // Eigen::Matrix4d T_co2c = (Trans_c2co * Rot_c2co).inverse().matrix();
 
+
+
+        // transformation from camera optical frame to lidar    
         Tco2l_ = (T_co2c * T_cl).matrix();
 
         // validated by comparing to ros tf
@@ -101,6 +113,11 @@ public:
     */
     Eigen::Matrix<double, 3, 1> lidar2camera(const Eigen::Matrix<double, 3, 1> &p_l)
     {
+        // std::cout << Tco2l_ * p_l.colwise().homogeneous().matrix() << std::endl;
+        // //  EX -2.29447 -0.369962 -0.238827 1
+        // std::cout << (Tco2l_ * p_l.colwise().homogeneous()).colwise().hnormalized().matrix() << std::endl;
+        // //  EX -2.29447 -0.369962 -0.238827
+
         return (Tco2l_ * p_l.colwise().homogeneous()).colwise().hnormalized();
     }
 

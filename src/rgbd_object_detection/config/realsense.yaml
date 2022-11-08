@@ -1,17 +1,30 @@
-color_cx: 313.90618896484375
-color_cy: 246.54579162597656
-color_fx: 616.7605590820312
-color_fy: 617.09521484375
+# color_cx: 313.90618896484375
+# color_cy: 246.54579162597656
+# color_fx: 616.7605590820312
+# color_fy: 617.09521484375
 
-depth_cx: 316.8928527832031
-depth_cy: 242.30789184570312
-depth_fx: 379.6465148925781
-depth_fy: 379.6465148925781
+# (919.5609130859375, 0.0, 631.4563598632812, 0.0, 919.559326171875, 368.9189147949219, 0.0, 0.0, 1.0)
+color_cx: 631.4563598632812
+color_cy: 368.9189147949219
+color_fx: 919.5609130859375
+color_fy: 919.559326171875
+
+# depth_cx: 316.8928527832031
+# depth_cy: 242.30789184570312
+# depth_fx: 379.6465148925781
+# depth_fy: 379.6465148925781
 
 # transformation from velodyne to camera_link
 rpy_lc: [0, 0.349066, 0] # roll, pitch yall
-t_lc: [-0.15, 0, 0.95]
+t_lc: [0, 0, 0.805]
 
+# transformation from velodyne to camera_link
+# rpy_lc: [0, 0, 0] # roll, pitch yall
+# t_lc: [0, 0, 0.27]
+
+# transformation from base_link to camera_link
+# rpy_bc: [0, 0, 0] # roll, pitch yall
+# t_bc: [-0.07, 0, 0.54]
 
 # tranformation from camera_link to color/depth optical frame
 rpy_c2co: [-1.572, -0.002, -1.571]
@@ -21,4 +34,4 @@ rpy_c2do: [-1.571, -0.000, -1.571]
 t_c2do: [0.000, 0.000, 0.000]
 
 image_height: 480
-image_width: 640
+image_width: 848
