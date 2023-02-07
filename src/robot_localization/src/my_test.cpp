@@ -12,7 +12,6 @@
 #include "geometry_msgs/Pose.h"
 #include "apriltag_ros/AprilTagDetectionArray.h"
 #include "geometry_msgs/PoseWithCovarianceStamped.h"
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 using namespace std;
 using namespace Eigen;
@@ -41,8 +40,8 @@ map<int, vector<float>> downward_id = {
 };
 
 map<int, vector<float>> forward_id = {
-	{0, {4.01, 0, 0.18}},
-	{1, {4.01, 0.245, 0.18}},
+	{0, {1.8, 0.121, 0.18}},
+	{1, {1.8, -0.121, 0.18}},
 	// {25, {4.01, -2, 2}}
 };
 
@@ -125,8 +124,9 @@ void IrisPositionForword(vector<vector<float>> &q_f, vector<int> &detected_id) 	
 	//forwardTag2world << 0, 0, 1, 0, 1, 0, -1, 0, 0;
 
 	for(unsigned int num = 0; num < q_f.size(); num++) {
-		q_f[num][2] += (0.01 + 0.1);  // calibration to tag frame           將z-axis位移0.11
-		temp_pos = {q_f[num][0], q_f[num][1], q_f[num][2], q_f[num][3], q_f[num][3], q_f[num][4], q_f[num][5], q_f[num][6]};
+		q_f[num][2] += (0.01 + 0.1);  // calibration to tag frame           將z-axis位移0.11     z
+		                                                                      //    x
+		temp_pos = {q_f[num][0], q_f[num][1], q_f[num][2]};
 		//rota_pos = forwardTag2world * temp_pos.transpose();
 
 		forward_pos.push_back(temp_pos);
@@ -141,28 +141,27 @@ void IrisPositionForword(vector<vector<float>> &q_f, vector<int> &detected_id) 	
 		cout << "num: " << num << endl;
 		switch(num) {
 			case 0:    // first forward pose sensor
+                cout << "case 0" << endl;
 				// Message of forward camera
 				Calibration_f1.header = header_f[num];
+                cout << "header_f" << endl;
 				Calibration_f1.header.frame_id = "turtlebot02/odom";
+                cout << "frame_id" << endl;
 				Calibration_f1.pose.pose.position.x = - forward_pos[num][2] + forward_id[detected_id[num]].at(0);
+                cout << "x" << endl;
 				Calibration_f1.pose.pose.position.y = forward_pos[num][1] + forward_id[detected_id[num]].at(1);
+                cout << "y" << endl;
 				Calibration_f1.pose.pose.position.z = forward_pos[num][0] + forward_id[detected_id[num]].at(2);
-				Calibration_f1.pose.pose.orientation.w = forward_pos[num][3];
-				Calibration_f1.pose.pose.orientation.x = forward_pos[num][4];
-				Calibration_f1.pose.pose.orientation.y = forward_pos[num][5];
-				Calibration_f1.pose.pose.orientation.z = forward_pos[num][6];
+                cout << "z" << endl;
 
-				// tf2::Quaternion q_orig, q_rot;
-				// tf2::convert([forward_pos[num][3],forward_pos[num][4],forward_pos[num][5],forward_pos[num][6]], q_orig);
-				// q_rot.setRPY(0, 0, 3.14);
-				// q_rot = q_orig*q_rot;
-				// q_new.normalize();
 				forward_pos_error.push_back( { abs(odomX-forward_pos[num][0]), 
 												abs(odomY-forward_pos[num][1]), 
 												abs(odomZ-forward_pos[num][2]) } );
+                cout << "push_back" << endl;
 				break;
 			case 1:   // second forward pose sensor
 				// Message of forward camera
+                cout << "case 1" << endl;
 				Calibration_f2.header = header_f[num];
 				Calibration_f2.header.frame_id = "turtlebot02/odom";
 
@@ -260,14 +259,9 @@ void forCallback(const apriltag_ros::AprilTagDetectionArray::ConstPtr &msg)
 			forward_tags[count][5] = msg->detections[count].pose.pose.pose.orientation.y;
 			forward_tags[count][6] = msg->detections[count].pose.pose.pose.orientation.z;
 
-			temp_q = {forward_tags[count][0], forward_tags[count][1], forward_tags[count][2], forward_tags[count][3],forward_tags[count][4],forward_tags[count][5],forward_tags[count][6]}; // tmp = y x z 只放position資料沒有放orientation資料
+			temp_q = {forward_tags[count][0], forward_tags[count][1], forward_tags[count][2]}; // tmp = y x z 只放position資料沒有放orientation資料
             
 			q_f.push_back(temp_q);
-			
-			// Quaterniond q(forward_tags[count][3],forward_tags[count][4],forward_tags[count][5],forward_tags[count][6]);
-			// Vector3f  euler = q.toRotationMatrix();
-			// cout << q << endl;
-
 		}
 		
 		IrisPositionForword(q_f, detected_id);

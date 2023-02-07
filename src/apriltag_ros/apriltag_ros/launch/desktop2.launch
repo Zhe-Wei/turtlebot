@@ -1,0 +1,10 @@
+<launch>
+    <!-- rqt -->
+    <!-- <node name="rqt_gui" pkg="rqt_gui" type="rqt_gui"/> -->
+
+    <!-- lane following -->
+    <include file="$(find lane_following)/launch/lane_following.launch" />
+
+    <!-- draw_tracking -->
+    <node name="draw_tracking" pkg="apriltag_ros" type="draw_tracking.py"/>
+</launch>

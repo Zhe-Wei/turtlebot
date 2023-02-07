@@ -1,25 +1,55 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3
+
+# Broadcasts static transforms. Used here to publish multiple map frame to tag frame transforms.
+# Author: Roberto Zegers R.
+# Date: 2019 June
 
 import rospy
-from geometry_msgs.msg import PoseWithCovarianceStamped
-from tf.transformations import quaternion_from_euler
+import tf_conversions # because of transformations
+import tf2_ros
+import geometry_msgs.msg
+import yaml
 
-rospy.init_node('init_pos')
-pub = rospy.Publisher('/initialpose', PoseWithCovarianceStamped, queue_size = 10)
-rate = rospy.Rate(1) # 10hz
-while not rospy.is_shutdown():
-    rate.sleep()
-    checkpoint = PoseWithCovarianceStamped()
+def broadcast_pose(tag_info):
+    br = tf2_ros.TransformBroadcaster()
 
-    checkpoint.pose.pose.position.x = 0.0
-    checkpoint.pose.pose.position.y = 0.0
-    checkpoint.pose.pose.position.z = 0.0
+    for tag_id, tf_data in tag_info.items():
+        t = geometry_msgs.msg.TransformStamped()
+        t.header.stamp = rospy.Time.now()
+        t.header.frame_id = "map"
+        if str(tag_id) == "desktop_camera":
+            t.child_frame_id = "desktop_camera"
+        else: 
+            t.child_frame_id = "bundle_" + str(tag_id)
+        t.transform.translation.x = tf_data[0]
+        t.transform.translation.y = tf_data[1]
+        t.transform.translation.z = tf_data[2]
+        q = tf_conversions.transformations.quaternion_from_euler(tf_data[3], tf_data[4], tf_data[5])
+        t.transform.rotation.x = q[0]
+        t.transform.rotation.y = q[1]
+        t.transform.rotation.z = q[2]
+        t.transform.rotation.w = q[3]
+        br.sendTransform(t)
 
-    [x,y,z,w]=quaternion_from_euler(0.0,0.0,0.0)
-    checkpoint.pose.pose.orientation.x = x
-    checkpoint.pose.pose.orientation.y = y
-    checkpoint.pose.pose.orientation.z = z
-    checkpoint.pose.pose.orientation.w = w
+if __name__ == '__main__':
+    rospy.init_node('tag_broadcaster')
+    rospy.loginfo("\n Initialized static transform broadcaster \n")
 
-    print(checkpoint)
-    pub.publish(checkpoint)
+    ## Load tag_info parameters from yaml file
+    # Get a parameter from our private namespace
+    param_path = rospy.get_param("~tag_poses_param_path")
+    rospy.loginfo("Tag poses broadcasted: %s", param_path)
+    f = open(param_path, 'r')
+    params_raw = f.read()
+    f.close()
+
+    params = yaml.load(params_raw)
+    # Dictionary with tag poses: [x, y, z, Roll, Pitch, Yaw]
+    tag_info = params['tag_info'] 
+    #rospy.loginfo("Tag info dict: %s", tag_info)
+
+    rate = rospy.Rate(10) # 10hz or 100 ms
+
+    while not rospy.is_shutdown():
+        broadcast_pose(tag_info)
+        rate.sleep()

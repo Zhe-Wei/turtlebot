@@ -150,7 +150,8 @@ add_executable(ukf_localization_node src/ukf_localization_node.cpp)
 add_executable(navsat_transform_node src/navsat_transform_node.cpp)
 add_executable(robot_localization_listener_node src/robot_localization_listener_node.cpp)
 add_executable(apriltag_coordinate_transformation src/apriltag_coordinate_transformation.cpp)
-
+add_executable(imu_coord_enu src/imu_coord_enu.cpp)
+add_executable(my_test src/my_test.cpp)
 # Dependencies
 add_dependencies(filter_base ${PROJECT_NAME}_gencpp)
 add_dependencies(navsat_transform ${PROJECT_NAME}_gencpp)
@@ -175,6 +176,8 @@ target_link_libraries(navsat_transform filter_utilities ros_filter_utilities ${c
 target_link_libraries(navsat_transform_node navsat_transform ${catkin_LIBRARIES} ${GeographicLib_LIBRARIES})
 target_link_libraries(navsat_transform_nodelet navsat_transform ${catkin_LIBRARIES} ${GeographicLib_LIBRARIES})
 target_link_libraries(apriltag_coordinate_transformation ${catkin_LIBRARIES})
+target_link_libraries(imu_coord_enu ${catkin_LIBRARIES})
+target_link_libraries(my_test ${catkin_LIBRARIES})
 
 #############
 ## Install ##

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+
+<launch>
+
+<arg name="tag_poses_file_name" default="tag_poses.yaml" doc="Specify a yaml param file, e.g.: tag_poses.yaml"/>
+
+  <node pkg="apriltag_ros" type="apriltag_static_publish_node.py" name="tf_world2tag_broadcaster" output="screen">
+    <param name="tag_poses_param_path" value="$(find apriltag_ros)/config/$(arg tag_poses_file_name)"/>
+  </node>
+  
+  <node pkg="apriltag_ros" type="robot_pose_raw_raw.py" name="map2odom_use_tags_pose" output="screen">
+  </node>
+
+  <!-- <node pkg="apriltag_ros" type="robot_coordinate.py" name="robot_coordinate" output="screen">
+  </node> -->
+  
+</launch>
