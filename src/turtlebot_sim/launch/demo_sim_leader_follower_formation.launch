@@ -1,0 +1,65 @@
+<launch>
+    <!-- 
+        # This launch file is used to launch the simulation environment for the turtlebot3
+        # It launches the gazebo world, the robot description, and the robot state publisher
+        # It also launches rviz and rqt_tf_tree for visualization
+    -->
+    
+    <!--  Arguments -->
+    <arg name="model" default="$(env TURTLEBOT3_MODEL)" doc="model type [burger, waffle, waffle_pi]"/>
+    <arg name="robot_name_0" default="robot_0"/>
+    <arg name="robot_name_1" default="robot_1"/>
+    <arg name="robot_name_2" default="robot_2"/>
+    <arg name="front_distance" default = "0.1" />
+    <param name="/use_sim_time" value="true" />
+
+    <!-- Start gazebo world -->
+    <include file="$(find gazebo_ros)/launch/empty_world.launch">
+        <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/empty.world"/>
+        <arg name="paused" value="false"/>
+        <arg name="use_sim_time" value="true"/>
+        <arg name="gui" value="true"/>
+        <arg name="headless" value="false"/>
+        <arg name="debug" value="false"/>
+    </include>
+
+    <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
+
+    <!-- Gazebo  -->
+    <node pkg="gazebo_ros" type="spawn_model" name="spawn_urdf"  args="$(find turtlebot3_gazebo)/worlds/turtlebot3_world.world" respawn="false" output="screen" />
+
+    <!-- include our robots -->
+    <include file="$(find turtlebot_sim)/launch/robots.launch"/>
+
+    <!-- publish static tf (world to robot_x/odom)-->
+    <node pkg="tf" type="static_transform_publisher" name="world_to_robot0" args="0 0 0 0 0 0 map $(arg robot_name_0)/odom 100" />
+    <node pkg="tf" type="static_transform_publisher" name="world_to_robot1" args="0 0 0 0 0 0 map $(arg robot_name_1)/odom 100" />
+    <node pkg="tf" type="static_transform_publisher" name="world_to_robot2" args="0 0 0 0 0 0 map $(arg robot_name_2)/odom 100" />
+
+    <!-- Setting robot front -->
+    <node pkg="tf" type="static_transform_publisher" name="robot_1_front" args="$(arg front_distance) 0 0 0 0 0 $(arg robot_name_1)/base_link $(arg robot_name_1)/front 20" />
+    <node pkg="tf" type="static_transform_publisher" name="robot_2_front" args="$(arg front_distance) 0 0 0 0 0 $(arg robot_name_2)/base_link $(arg robot_name_2)/front 20" />
+
+    <!-- Run follower's code -->
+    <!-- <node pkg="turtlebot_sim" type="leader_follower.py" name="robot_1_follower" output="screen">
+        <param name="leader_robot_name" value="$(arg robot_name_0)" />
+        <param name="follower_robot_name" value="$(arg robot_name_1)" />
+        <param name="set_distance" value="0.5" />
+        <param name="expected_theta" value="$(eval 3.14159 * 2 /3)" />
+        <param name="front_distance" value="$(arg front_distance)" />
+    </node>
+
+    <node pkg="turtlebot_sim" type="leader_follower.py" name="robot_2_follower" output="screen">
+        <param name="leader_robot_name" value="$(arg robot_name_0)" />
+        <param name="follower_robot_name" value="$(arg robot_name_2)" />
+        <param name="set_distance" value="0.5" />
+        <param name="expected_theta" value="$(eval -3.14159 * 2 /3)" />
+        <param name="front_distance" value="$(arg front_distance)" />
+    </node> -->
+
+    <!-- rviz -->
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find turtlebot_sim)/rviz/demo.rviz"
+    output="screen" />
+    <!-- rqt tf tree -->
+    <node pkg="rqt_tf_tree" type="rqt_tf_tree" name="rqt_tf_tree" output="screen" />
+</launch>

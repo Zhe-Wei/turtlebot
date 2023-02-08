@@ -77,6 +77,8 @@
         "typeindex": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp",
-        "bit": "cpp"
-    }
+        "bit": "cpp",
+        "geometry": "cpp"
+    },
+    "CodeGPT.query.language": "English"
 }
