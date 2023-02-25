@@ -8,16 +8,16 @@
     <node pkg="turtlebot_sim" type="leader_follower_formation.py" name="robot_1_follower" output="screen">
         <param name="leader_robot_name" value="$(arg robot_name_0)" />
         <param name="follower_robot_name" value="$(arg robot_name_1)" />
-        <param name="set_distance" value="1.58" />
-        <param name="expected_theta" value="$(eval 3.14159 * 2 /3)" />
+        <param name="set_distance" value="2.58" />
+        <param name="expected_theta" value="$(eval 3.14159 * 2 / 3)" />
         <param name="front_distance" value="$(arg front_distance)" />
     </node>
 
     <node pkg="turtlebot_sim" type="leader_follower_formation.py" name="robot_2_follower" output="screen">
         <param name="leader_robot_name" value="$(arg robot_name_0)" />
         <param name="follower_robot_name" value="$(arg robot_name_2)" />
-        <param name="set_distance" value="1.58" />
-        <param name="expected_theta" value="$(eval -3.14159 * 2 /3)" />
+        <param name="set_distance" value="2.58" />
+        <param name="expected_theta" value="$(eval -3.14159 * 2 / 3)" />
         <param name="front_distance" value="$(arg front_distance)" />
     </node>
 </launch>

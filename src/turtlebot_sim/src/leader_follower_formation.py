@@ -41,13 +41,13 @@ def odom_cb(msg):
     
 
 if __name__ == '__main__':
-    rospy.init_node('tianbot_mini_tf_listener')
+    rospy.init_node('turtlebot_tf_listener')
     leader_robot_name = rospy.get_param('~leader_robot_name')
     follower_robot_name = rospy.get_param('~follower_robot_name')
-    target_frame = rospy.get_param('~target_frame',leader_robot_name+"/base_link")
+    target_frame = rospy.get_param('~target_frame',leader_robot_name+"/base_footprint")
     theta0 = rospy.get_param('~expected_theta', np.pi)
     L0 = rospy.get_param('~expected_distance', 1)
-    d = rospy.get_param('~front_distance', 0.1)
+    d = rospy.get_param('~front_distance', 0.5)
     leader_vel = rospy.Subscriber(leader_robot_name + "/odom", Odometry, odom_cb)
     listener = tf.TransformListener()
 
@@ -60,7 +60,9 @@ if __name__ == '__main__':
 
     while not rospy.is_shutdown():
         try:
-            (trans, rot) = listener.lookupTransform(leader_robot_name+'/base_link', follower_robot_name+'/front', rospy.Time())
+            (trans, rot) = listener.lookupTransform(target_frame, follower_robot_name+'/front', rospy.Time())
+            # print(round(trans, 2), round(rot, 2))
+            print(trans, rot)
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             continue
 

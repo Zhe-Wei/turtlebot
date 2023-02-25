@@ -37,8 +37,8 @@
     <node pkg="tf" type="static_transform_publisher" name="world_to_robot2" args="0 0 0 0 0 0 map $(arg robot_name_2)/odom 100" />
 
     <!-- Setting robot front -->
-    <node pkg="tf" type="static_transform_publisher" name="robot_1_front" args="$(arg front_distance) 0 0 0 0 0 $(arg robot_name_1)/base_link $(arg robot_name_1)/front 20" />
-    <node pkg="tf" type="static_transform_publisher" name="robot_2_front" args="$(arg front_distance) 0 0 0 0 0 $(arg robot_name_2)/base_link $(arg robot_name_2)/front 20" />
+    <node pkg="tf" type="static_transform_publisher" name="robot_1_front" args="$(arg front_distance) 0 0 0 0 0 $(arg robot_name_1)/base_footprint $(arg robot_name_1)/front 20" />
+    <node pkg="tf" type="static_transform_publisher" name="robot_2_front" args="$(arg front_distance) 0 0 0 0 0 $(arg robot_name_2)/base_footprint $(arg robot_name_2)/front 20" />
 
     <!-- Run follower's code -->
     <!-- <node pkg="turtlebot_sim" type="leader_follower.py" name="robot_1_follower" output="screen">
