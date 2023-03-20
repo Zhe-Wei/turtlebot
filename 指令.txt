@@ -1,0 +1,4 @@
+roslaunch turtlebot_sim demo_sim_leader_follower_formation.launch 
+roslaunch turtlebot_sim slave_sim.launch
+rosrun turtlebot_sim visualization_robots.py 
+

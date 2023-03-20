@@ -105,3 +105,5 @@ qtcreator-*
 
 # Catkin custom files
 CATKIN_IGNORE
+src/turtlebot3
+src/turtlebot3_autorace_2020
