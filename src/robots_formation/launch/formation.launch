@@ -1,0 +1,19 @@
+<launch>
+  <!-- turtlebot navigation and amcl -->
+  <include file="$(find turtlebot3_navigation)/launch/turtlebot3_navigation.launch">
+     <arg name="map_file" value="/home/ubuntu/catkin_ws/src/robots_formation/maps/demo_big_map.yaml"/>
+  </include>
+
+  <!-- publish static tf (world to robot_x/odom)-->
+  <node pkg="tf" type="static_transform_publisher" name="world_to_master" args="0 0 0 0 0 0 world /map 100" />
+  <node pkg="tf" type="static_transform_publisher" name="world_to_slave1" args="0 0 0 0 0 0 world slave_1/map 100" />
+
+  <!-- turn on robot visulization -->
+  <!-- <node name="visualization" pkg="turtlebot_sim" type="visualization_robots">
+    <param name="master_robot_name" value=""/>
+    <param name="slave_robot_name" value="slave_1"/>
+  </node> -->
+  <!-- rviz -->
+  <!-- <node name="rviz_test" pkg="rviz" type="rviz" args="-d /home/ubuntu/catkin_ws/src/robots_formation/rviz/multi-robot formation.rviz" /> -->
+
+</launch>

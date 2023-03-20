@@ -21,7 +21,7 @@
         <param name="tf_prefix" value="robot_1" />
         <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
         <include file="$(find turtlebot_sim)/launch/one_robot.launch" >
-            <arg name="init_pose" value="-x -1.5 -y 0.5 -z 0" />
+            <arg name="init_pose" value="-x -1 -y 1 -z 0" />
             <arg name="robot_name"  value="robot_1" />
         </include>
     </group>
@@ -31,7 +31,7 @@
         <param name="tf_prefix" value="robot_2" />
         <param name="robot_description" command="$(find xacro)/xacro --inorder $(find turtlebot3_description)/urdf/turtlebot3_$(arg model).urdf.xacro" />
         <include file="$(find turtlebot_sim)/launch/one_robot.launch" >
-            <arg name="init_pose" value="-x -1.5 -y -0.5 -z 0" />
+            <arg name="init_pose" value="-x -1 -y -1 -z 0" />
             <arg name="robot_name"  value="robot_2" />
         </include>
     </group>

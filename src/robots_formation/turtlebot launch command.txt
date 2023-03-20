@@ -1,0 +1,1 @@
+ROS_NAMESPACE=master roslaunch turtlebot3_navigation turtlebot3_navigation.launch map_file:=/home/ubuntu/Downloads/test_2.yaml set_base_frame:=master/base_footprint set_odom_frame:=master/odom set_map_frame:=master/map
