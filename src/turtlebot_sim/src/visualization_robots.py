@@ -120,9 +120,9 @@ def main():
     slave_robot_name_2 = rospy.get_param('~slave_robot_name', 'robot_2')
 
     fig = plt.figure(figsize=(12, 5))
-    ax1 = fig.add_subplot(1, 3, 1)
-    ax2 = fig.add_subplot(1, 3, 2)
-    ax3 = fig.add_subplot(1, 3, 3)
+    ax1 = fig.add_subplot(1, 2, 1)
+    # ax2 = fig.add_subplot(1, 3, 2)
+    ax3 = fig.add_subplot(1, 2, 2)
 
     # Create a TFListenerNode for each robot
     tf_listener_1 = TFListenerNode(master_robot_name)
@@ -145,13 +145,16 @@ def main():
     def update_plots():
         # Clear the plots
         ax1.clear()
-        ax2.clear()
+        # ax2.clear()
         ax3.clear()
 
         # Update the coordinate plot (i.e. ax1)
         tf_listener_1.update_coordinate_plot(ax1)
         tf_listener_2.update_coordinate_plot(ax1)
-        tf_listener_3.update_coordinate_plot(ax1)
+        try:
+            tf_listener_3.update_coordinate_plot(ax1)
+        except:
+            rospy.loginfo("Slave robot 2 is not exist")
         ax1.legend()
 
     
@@ -161,7 +164,10 @@ def main():
 
         # Display the error distance with master robot (i.e. ax3)
         distance_error_1.updateErrorPlot(ax3, master_robot_name, slave_robot_name_1)
-        distance_error_2.updateErrorPlot(ax3, master_robot_name, slave_robot_name_2)
+        try:
+            distance_error_2.updateErrorPlot(ax3, master_robot_name, slave_robot_name_2)
+        except:
+            rospy.loginfo("Slave robot 2 is not exist")
         ax3.legend()
 
         # Update the plots
@@ -186,10 +192,10 @@ def main():
         tf_listener_3.z_list.clear()
 
         # Clear ax2 data
-        ax2.clear()
-        ax2.set_xlabel('Time')
-        ax2.set_ylabel('Distance')
-        ax2.set_title('Distance between robots')
+        # ax2.clear()
+        # ax2.set_xlabel('Time')
+        # ax2.set_ylabel('Distance')
+        # ax2.set_title('Distance between robots')
         distance_list.clear()
         time_list.clear()
 
@@ -214,11 +220,11 @@ def main():
             distance_list.append(distance)
             time_list.append(rospy.Time.now().to_sec()-start_time)
 
-            ax2.cla()
-            ax2.set_xlabel('Time')
-            ax2.set_ylabel('Distance')
-            ax2.set_title('Distance between robots')
-            ax2.plot(time_list, distance_list, 'bo', markersize=1, linewidth=0.5, linestyle='solid')
+            # ax2.cla()
+            # ax2.set_xlabel('Time')
+            # ax2.set_ylabel('Distance')
+            # ax2.set_title('Distance between robots')
+            # ax2.plot(time_list, distance_list, 'bo', markersize=1, linewidth=0.5, linestyle='solid')
             # print('Distance: ', distance, 'Time',rospy.Time.now().to_sec()-start_time)
         except:
             print('No TF data')
