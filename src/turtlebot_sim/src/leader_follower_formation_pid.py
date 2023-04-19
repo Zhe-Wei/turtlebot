@@ -37,6 +37,7 @@ odom_linear_x=0
 odom_linear_y=0
 odom_angular_z=0
 
+# Leader robot's velocity and rotaion 
 def odom_cb(msg):
     global odom_linear_x, odom_linear_y, odom_angular_z
     odom_linear_x = msg.twist.twist.linear.x
@@ -48,14 +49,13 @@ def odom_cb(msg):
 
 if __name__ == '__main__':
     # Initialize the node
-    rospy.init_node('turtlebot_tf_listener')
+    rospy.init_node('follower formation control')
 
     # Get the parameters
     # target_frame = rospy.get_param('~target_frame',leader_robot_name+"/base_footprint")
     # theta0 = rospy.get_param('~expected_theta', np.pi)
     # L0 = rospy.get_param('~expected_distance', 1)
     # d = rospy.get_param('~front_distance', 0.5)
-
 
     leader_robot_name = rospy.get_param('~leader_robot_name', "robot_0")
     follower_robot_name = rospy.get_param('~follower_robot_name', "robot_1")
@@ -112,12 +112,17 @@ if __name__ == '__main__':
     e_angular_y = 0
 
     # Swap coordinates, slave_x and slave_y use leader's coordinate system, 右邊為x軸，前面為y軸
+    # 從 leader Relative position 轉 World coordinate
     slave_x = slave_x + slave_y
     slave_y = slave_x - slave_y
     slave_x = -(slave_x - slave_y)
     
+    
+    # All robot stop when shutdown
+    def shutdown_cb():
+        slave_vel.publish(Twist())
 
-    rospy.on_shutdown(lambda: slave_vel.publish(Twist()))
+    rospy.on_shutdown(shutdown_cb)
 
     while not rospy.is_shutdown():
         # Get the transform from the base frame to the slave frame
@@ -146,45 +151,43 @@ if __name__ == '__main__':
         # print("Yaw: ", e_angular_z)
         
         # print("Translation:")
-        # print("X: ", e_linear_x)
-        # print("Y: ", e_linear_y)
-        # print("Z: ", e_linear_z)
-        
+        # print(follower_robot_name + "x: ", round(e_linear_x, 2), "y: ", round(e_linear_y, 2), "z: ", round(e_linear_z, 2))
 
-
-        if math.fabs(e_linear_x) < 5:
+        # Calculate the angular turn to the slave
+        if math.fabs(e_linear_x) < 5: # x軸差距小於5時，以leader的r計算
             angular_turn = math.atan2(slave_y, odom_linear_x/odom_angular_z)
-        else:
+        else: # x軸差距大於5時
             angular_turn = math.atan2(slave_y, slave_x)
 
-        if (math.fabs(odom_angular_z) > min_vel_theta):
-            if slave_x > 0 and slave_y > 0:
-                if odom_angular_z > 0:
-                    e_angular_z = e_angular_z+angular_turn
-                else:
+        if (math.fabs(odom_angular_z) > min_vel_theta): # 有轉動時
+            if slave_x > 0 and slave_y > 0: # 第一象限
+                if odom_angular_z > 0:  # 逆時針轉
+                    e_angular_z = e_angular_z + angular_turn 
+                else: # 順時針轉
                     e_angular_z=e_angular_z- np.pi + angular_turn
-            elif slave_x <= 0 and slave_y >= 0:
+            elif slave_x <= 0 and slave_y >= 0: # 第二象限
                 if odom_angular_z > 0:
                     e_angular_z = e_angular_z - angular_turn
                 else:
                     e_angular_z = e_angular_z+angular_turn- np.pi 
-            elif slave_x < 0 and slave_y < 0:
+            elif slave_x < 0 and slave_y < 0: # 第三象限
                 if odom_angular_z > 0:
                     e_angular_z = e_angular_z - angular_turn
                 else:
-                    e_angular_z = e_angular_z+ np.pi + angular_turn
-            else:
+                    e_angular_z = e_angular_z + np.pi + angular_turn
+            else: # 第四象限
                 if odom_angular_z > 0:
                     e_angular_z = e_angular_z - angular_turn
                 else:
-                    e_angular_z = e_angular_z+ np.pi + angular_turn
+                    e_angular_z = e_angular_z + np.pi + angular_turn
         
 
             if(e_angular_z > 4.71 and e_angular_z < 7.85): e_angular_z = e_angular_z-6.28
             if(e_angular_z < -4.71 and e_angular_z > -7.85): e_angular_z = e_angular_z+6.28
         # print("Deviation: \n e_linear_x = {}\n e_linear_y = {}\n e_angular_z = {}\n".format(e_linear_x, e_linear_y, e_angular_z))
 
-        if abs(odom_linear_x/odom_angular_z) < 5.0: # odom_linear_x/odom_angular_z < 5.0 means the car is not moving in a straight line
+        # 透過半徑的長短，來判斷主車轉彎幅度 (r越大，轉彎越小，r越小，轉彎越大)
+        if abs(odom_linear_x/odom_angular_z) < 5.0: # odom_linear_x/odom_angular_z < 5.0 means the car is not moving in a straight line 
             d_r = 0.0
             if slave_x + odom_linear_x/odom_angular_z >= 0:
                 d_r = math.sqrt(pow(slave_x + odom_linear_x/odom_angular_z, 2) + pow(slave_y, 2)) - odom_linear_x/odom_angular_z
