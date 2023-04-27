@@ -92,7 +92,7 @@ if __name__ == '__main__':
 
     # Publish to the follower robot's velocity
     print(follower_robot_name + '/cmd_vel')
-    slave_vel = rospy.Publisher(follower_robot_name + '/cmd_vel', Twist, queue_size=1)
+    slave_vel = rospy.Publisher(follower_robot_name + '/cmd_vel_ori', Twist, queue_size=1)
 
     # Create a transform listener
     listener = tf.TransformListener()
@@ -197,8 +197,14 @@ if __name__ == '__main__':
                                                                                                                     # v_slave/w_slave=(odom_linear_x+odom_angular_z*d_r) /odom_angular_z=r_master+d_r=r_slave, which complies with kinematic rules
         else:
             vel_msg.linear.x = odom_linear_x + k_v * e_linear_x
+
+        # k_l 表示error_y的影響力，k_a表示error_z的影響力
         _k_a = k_a
         _k_l = k_l
+
+        if (math.fabs(odom_linear_x) < min_vel_x) and math.fabs(e_linear_x) < 0.1 and math.fabs(e_linear_y) < 0.1 and math.fabs(e_angular_z) < 0.1: # When the slave car is not moving, the parameters are set to 0
+            _k_l = 1 * _k_a
+            _k_a = 2 * _k_l
 
         if vel_msg.linear.x < -min_vel_x: # When the slave car is reversing, correct the signs of the parameters to be opposite to those when it is moving forward
             if abs(odom_angular_z) > min_vel_theta:

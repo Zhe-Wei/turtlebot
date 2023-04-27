@@ -18,8 +18,8 @@ from skfuzzy import control as ctrl
 import skfuzzy.control.visualization as viz
 
 # show plots
-SHOW_PLOTS = True
-PUBLISH_VEL = False
+SHOW_PLOTS = False
+PUBLISH_VEL = True
 DEBUG = False
 ANG_VEL_INFER = True
 # Master robot's velocity
@@ -88,7 +88,7 @@ def move():
             print("acc_angular", acc_angular_zero)
 
         ### Input data for fuzzy inference and use stauration to limit the input value
-        z_error_value = e_angular_z
+        z_error_value = -e_angular_z
         z_error_value = min(max(z_error_value, -max_angular_error), max_angular_error)
 
         angular_vel_value = slave_angular_z
@@ -302,7 +302,7 @@ def move():
     def linear_vel_inference():
         ### Input range
         max_x_error = 2 # x_error 範圍
-        x_error = np.arange(-2, 2, 0.1)
+        x_error = np.arange(-2, 2, 0.01)
         linear_vel = np.arange(-2, 2, 0.01)
 
         ### Output range
@@ -310,9 +310,9 @@ def move():
 
         ### Generate Input fuzzy membership functions
         x_error_very_neg = fuzz.trapmf(x_error, [-2, -2, -1.625, -0.75])
-        x_error_neg = fuzz.trimf(x_error, [-1.625, -0.75, 0])
-        x_error_zero = fuzz.trimf(x_error, [-0.75, 0, 0.75])
-        x_error_pos = fuzz.trimf(x_error, [0, 0.75, 1.625])
+        x_error_neg = fuzz.trimf(x_error, [-1, -0.5625, -0.125])
+        x_error_zero = fuzz.trimf(x_error, [-0.25, 0, 0.25])
+        x_error_pos = fuzz.trimf(x_error, [0.125, 0.5625, 1])
         x_error_very_pos = fuzz.trapmf(x_error, [0.75, 1.625, 2, 2])
 
         linear_vel_very_neg = fuzz.trapmf(linear_vel, [-2, -2, -1.625, -0.75])
@@ -487,7 +487,7 @@ def move():
         try:
             centroid_acc_x = fuzz.defuzz(acc_x, agg, 'centroid')
         except:
-            rospy.loginfo('Total area is zero in defuzzification!')
+            rospy.loginfo('(Linear) Total area is zero in defuzzification!')
             centroid_acc_x = 0
 
         deffuz_acc = fuzz.interp_membership(acc_x, agg, centroid_acc_x)  # for plot
@@ -525,37 +525,88 @@ def move():
 
     vel_inference = linear_vel_inference()
     vel_msg.linear.x = slave_linear_x + vel_inference
+    vel_msg.linear.x = vel_msg.linear.x
 
     ## angular velocity
 
     _k_a = 1
     _k_l = 1
 
-
+    global e_angular_z
+    if math.fabs(e_linear_x) < 5: # x軸差距小於5時，以leader的r計算
+        angular_turn = math.atan2(slave_y, odom_linear_x/odom_angular_z)
+    else: # x軸差距大於5時
+        angular_turn = math.atan2(slave_y, slave_x)
+    if (math.fabs(odom_angular_z) > min_vel_theta): # 有轉動時
+        if slave_x > 0 and slave_y > 0: # 第一象限
+            if odom_angular_z > 0:  # 逆時針轉
+                e_angular_z = e_angular_z + angular_turn 
+            else: # 順時針轉
+                e_angular_z=e_angular_z- np.pi + angular_turn
+        elif slave_x <= 0 and slave_y >= 0: # 第二象限
+            if odom_angular_z > 0:
+                e_angular_z = e_angular_z - angular_turn
+            else:
+                e_angular_z = e_angular_z+angular_turn- np.pi 
+        elif slave_x < 0 and slave_y < 0: # 第三象限
+            if odom_angular_z > 0:
+                e_angular_z = e_angular_z - angular_turn
+            else:
+                e_angular_z = e_angular_z + np.pi + angular_turn
+        else: # 第四象限
+            if odom_angular_z > 0:
+                e_angular_z = e_angular_z - angular_turn
+            else:
+                e_angular_z = e_angular_z + np.pi + angular_turn
+        if(e_angular_z > 4.71 and e_angular_z < 7.85): e_angular_z = e_angular_z-6.28
+        if(e_angular_z < -4.71 and e_angular_z > -7.85): e_angular_z = e_angular_z+6.28
 
     # if ANG_VEL_INFER:
-    if math.fabs(e_angular_z) < 0.2 and math.fabs(e_linear_y) < 0.2:
-        vel_msg.angular.z = 0
-        angular_vel_inference()
-    else:
-        ang_infernce = angular_vel_inference()
-        # print("max_vel_theta: ", max_vel_theta)
-        # print("ang_infernce: ", ang_infernce)
-        print("acc_z:  " + str(round(ang_infernce, 2)) + ",    e_y " + str(round(e_linear_y, 2)))
+    # if math.fabs(e_angular_z) < 0.2 and math.fabs(e_linear_y) < 0.2:
+    #     vel_msg.angular.z = 0
+    #     angular_vel_inference()
+    # else:
+        # ang_infernce = angular_vel_inference()
+        # # print("max_vel_theta: ", max_vel_theta)
+        # # print("ang_infernce: ", ang_infernce)
+        # print("acc_z:  " + str(round(ang_infernce, 2)) + ",    e_y " + str(round(e_linear_y, 2)))
+        # if vel_msg.linear.x < -min_vel_x:
+        #     if abs(odom_angular_z) > min_vel_theta:
+        #             _k_a = -_k_a # _k_a parameter is positive for forward motion
+        #             _k_l = -_k_l
+        # _k_l = 0
+        # _k_a = 1.2
+        # vel_msg.angular.z =  1.2 * odom_angular_z + 1 * (slave_angular_z + ang_infernce) + _k_l * e_linear_y + _k_a * math.sin(e_angular_z)
+        # vel_msg.angular.z =  (slave_angular_z + ang_infernce)
+
+    # k_l 表示error_y的影響力，k_a表示error_z的影響力
+    k_l = 3
+    k_a = 1
+
+    _k_a = k_a
+    _k_l = k_l
+    if (math.fabs(odom_linear_x) < min_vel_x):
+        _k_l = 1
+        _k_a = 2
+    if vel_msg.linear.x < -min_vel_x: # When the slave car is reversing, correct the signs of the parameters to be opposite to those when it is moving forward
         if abs(odom_angular_z) > min_vel_theta:
-                _k_a = -_k_a # _k_a parameter is positive for forward motion
-                _k_l = -_k_l
-        vel_msg.angular.z = odom_angular_z + 1 * (slave_angular_z + ang_infernce) + _k_l * e_linear_y + _k_a * math.sin(e_angular_z)
-        vel_msg.angular.z = (slave_angular_z + ang_infernce)
+            _k_a = -k_a # _k_a parameter is positive for forward motion
+            _k_l = -k_l
 
+    vel_msg.angular.z =   _k_l * e_linear_y + _k_a * math.sin(e_angular_z)
 
-        if vel_msg.angular.z  > max_vel_theta:
-            vel_msg.angular.z = max_vel_theta
-        elif vel_msg.angular.z  < -max_vel_theta:
-            vel_msg.angular.z = -max_vel_theta
+    # if vel_msg.linear.x > max_vel_x:
+    #     vel_msg.linear.x = max_vel_x # Velocity limit
+    # elif vel_msg.linear.x < -max_vel_x:
+    #     vel_msg.linear.x = -max_vel_x
 
-    print("vel_msg.linear.x: ", vel_msg.linear.x)
-    print("vel_msg.angular.z: ", vel_msg.angular.z)
+    # if vel_msg.angular.z  > max_vel_theta:
+    #     vel_msg.angular.z = max_vel_theta
+    # elif vel_msg.angular.z  < -max_vel_theta:
+    #     vel_msg.angular.z = -max_vel_theta
+
+    # print("vel_msg.linear.x: ", vel_msg.linear.x)
+    # print("vel_msg.angular.z: ", vel_msg.angular.z)
 
     if SHOW_PLOTS:
         plt.tight_layout()
@@ -580,7 +631,8 @@ def slave_cb(msg):
     slave_linear_x = msg.linear.x
     slave_linear_y = msg.linear.y
     slave_angular_z = msg.angular.z
-    print(slave_linear_x, slave_linear_y, slave_angular_z)
+    if DEBUG:
+        print(slave_linear_x, slave_linear_y, slave_angular_z)
 
 
 # Call the move function
@@ -623,7 +675,7 @@ if __name__ == '__main__':
 
     # Publish to the follower robot's velocity
     print(follower_robot_name + '/cmd_vel')
-    slave_vel_pub = rospy.Publisher(follower_robot_name + '/cmd_vel', Twist, queue_size=1)
+    slave_vel_pub = rospy.Publisher(follower_robot_name + '/cmd_vel_ori', Twist, queue_size=1)
 
     # Create a transform listener
     listener = tf.TransformListener()
@@ -639,8 +691,9 @@ if __name__ == '__main__':
     listner = tf.TransformListener()
     vel_msg = Twist()
 
-    e_angular_z = 0
-    e_angular_y = 0
+    # e_angular_z , e_angular_y
+    # e_angular_z = 0
+    # e_angular_y = 0
 
     # Swap coordinates, slave_x and slave_y use leader's coordinate system, 右邊為x軸，前面為y軸
     # 從 leader Relative position 轉 World coordinate
@@ -684,7 +737,7 @@ if __name__ == '__main__':
 
         e_angular_x, e_angular_y, e_angular_z = rpy
         e_linear_x, e_linear_y, e_linear_z = trans
-        e_angular_z = -e_angular_z
+        e_angular_z = e_angular_z
         try:
             move()
         except rospy.ROSInterruptException:
