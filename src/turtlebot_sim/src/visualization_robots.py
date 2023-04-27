@@ -164,11 +164,18 @@ def main():
         # show_master2slave(current_time)
 
         # Display the error distance with master robot (i.e. ax3)
-        distance_error_1.updateErrorPlot(ax3, master_robot_name, slave_robot_name_1)
+        try:
+            distance_error_1.updateErrorPlot(ax3, master_robot_name, slave_robot_name_1)
+
+        except:
+            rospy.loginfo("Slave robot 1 is not exist")
+
         try:
             distance_error_2.updateErrorPlot(ax3, master_robot_name, slave_robot_name_2)
+
         except:
             rospy.loginfo("Slave robot 2 is not exist")
+
         ax3.legend()
 
         # Update the plots
