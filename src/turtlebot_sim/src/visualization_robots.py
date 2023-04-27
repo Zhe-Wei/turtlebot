@@ -67,13 +67,14 @@ class Show_Master2Slave_Error(object):
     y_min = -0.5
     y_max = 0.5
 
-    def __init__(self, tf_1, tf_2, slave_robot_name):
+    def __init__(self, tf_1, tf_2, slave_robot_name, color):
         self.tf_listener_1 = tf_1
         self.tf_listener_2 = tf_2
         self.error_distance_list = []
         self.time_list = []
         self.slave_robot_name = slave_robot_name
         self.listener = tf.TransformListener()
+        self.color = color
         
         
     def updateErrorPlot(self, ax3, master_robot_name, slave_robot_name):
@@ -105,7 +106,7 @@ class Show_Master2Slave_Error(object):
         
         ax3.set_ylim(self.__class__.y_min-0.5, self.__class__.y_max+0.5)
         # print(error_dis)
-        ax3.plot(self.time_list, self.error_distance_list, label=slave_robot_name, markersize=1, linewidth=0.5, linestyle='solid')
+        ax3.plot(self.time_list, self.error_distance_list, label=slave_robot_name, markersize=1, linewidth=0.5, linestyle='solid', color=self.color)
         # except:
         #     print("updateErrorPlot -> No data")
         #     return
@@ -132,8 +133,8 @@ def main():
     # Create a Show_Master2Slave_Error for each robot
     Show_Master2Slave_Error.y_max = 0.5
     Show_Master2Slave_Error.y_min = -0.5
-    distance_error_1 = Show_Master2Slave_Error(tf_listener_1, tf_listener_2, slave_robot_name_1)
-    distance_error_2 = Show_Master2Slave_Error(tf_listener_1, tf_listener_3, slave_robot_name_2)
+    distance_error_1 = Show_Master2Slave_Error(tf_listener_1, tf_listener_2, slave_robot_name_1, color='orange')
+    distance_error_2 = Show_Master2Slave_Error(tf_listener_1, tf_listener_3, slave_robot_name_2, color='green')
 
     distance_list = []
     time_list = []
