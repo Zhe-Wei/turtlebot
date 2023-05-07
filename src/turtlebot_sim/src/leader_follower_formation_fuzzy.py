@@ -445,7 +445,11 @@ def move():
         # avg_acc_x_zero_rules = np.min(list(filter(lambda x: x.size > 0, acc_x_zero_rules)))
         # avg_acc_x_pos_rules = np.min(list(filter(lambda x: x.size > 0, acc_x_pos_rules)))
         # avg_acc_x_very_pos_rules = np.min(list(filter(lambda x: x.size > 0, acc_x_very_pos_rules)))
-
+        
+        # if all avg_acc_x is zero let avg_acc_x_zero be 0.1, avoid defuzzification area is zero
+        if avg_acc_x_very_neg_rules == 0 and avg_acc_x_neg_rules == 0 and avg_acc_x_zero_rules == 0 and avg_acc_x_pos_rules == 0 and avg_acc_x_very_pos_rules == 0:
+            avg_acc_x_zero_rules = 0.1
+            
         if DEBUG:
             print("####avg_rules#### ")
             print("very_neg_rules", avg_acc_x_very_neg_rules)
@@ -483,14 +487,15 @@ def move():
 
         # Defuzzification
         agg = np.fmax(agg_acc_x_very_neg, np.fmax(agg_acc_x_neg, np.fmax(agg_acc_x_zero, np.fmax(agg_acc_x_pos, agg_acc_x_very_pos))))
-        
+
         try:
             centroid_acc_x = fuzz.defuzz(acc_x, agg, 'centroid')
+            deffuz_acc = fuzz.interp_membership(acc_x, agg, centroid_acc_x)  # for plot
         except:
             rospy.loginfo('(Linear) Total area is zero in defuzzification!')
             centroid_acc_x = 0
+            deffuz_acc = 0
 
-        deffuz_acc = fuzz.interp_membership(acc_x, agg, centroid_acc_x)  # for plot
 
         if DEBUG:
             print(centroid_acc_x, slave_linear_x + centroid_acc_x)
@@ -522,13 +527,11 @@ def move():
     vel_msg = Twist()
 
     ## linear velocity
-
     vel_inference = linear_vel_inference()
     vel_msg.linear.x = slave_linear_x + vel_inference
     vel_msg.linear.x = vel_msg.linear.x
 
     ## angular velocity
-
     _k_a = 1
     _k_l = 1
 
@@ -580,14 +583,14 @@ def move():
         # vel_msg.angular.z =  (slave_angular_z + ang_infernce)
 
     # k_l 表示error_y的影響力，k_a表示error_z的影響力
-    k_l = 3
-    k_a = 1
+    k_l = 0.5
+    k_a = 0.5
 
     _k_a = k_a
     _k_l = k_l
     if (math.fabs(odom_linear_x) < min_vel_x):
         _k_l = 1
-        _k_a = 2
+        _k_a = 1
     if vel_msg.linear.x < -min_vel_x: # When the slave car is reversing, correct the signs of the parameters to be opposite to those when it is moving forward
         if abs(odom_angular_z) > min_vel_theta:
             _k_a = -k_a # _k_a parameter is positive for forward motion
@@ -666,7 +669,7 @@ if __name__ == '__main__':
     rospy.sleep(1)
 
     # Subscribe to the slave robot's cmd_vel
-    slave_vel = rospy.Subscriber( follower_robot_name + "/cmd_vel", Twist, slave_cb)
+    slave_vel = rospy.Subscriber(follower_robot_name + "/cmd_vel", Twist, slave_cb)
 
     # Subscribe to the leader robot's odometry
     leader_vel = rospy.Subscriber(leader_robot_name + "/odom", Odometry, odom_cb)

@@ -13,7 +13,7 @@ import numpy as np
 # from simple_pid import PID
 
 from dynamic_reconfigure.server import Server # http://wiki.ros.org/dynamic_reconfigure/Tutorials/HowToWriteYourFirstCfgFile
-from turtlebot_sim.cfg import tf_pidConfig   
+# from turtlebot_sim.cfg import tf_pidConfig   
     
 e_linear_x = 0
 e_linear_y = 0
