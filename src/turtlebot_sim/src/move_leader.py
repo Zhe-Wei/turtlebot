@@ -87,7 +87,7 @@ if __name__ == '__main__':
     
     # Get the parameters
     leader_robot_name = rospy.get_param('~leader_robot_name', "robot_0")
-    mode = rospy.get_param('~mode', "circle")
+    mode = rospy.get_param('~mode', "circle") # 'circle' or 'straight'
     straight_linear_speed = rospy.get_param('~straight_linear_speed', 0.5)
     circle_linear_speed = rospy.get_param('~circle_linear_speed', 0.5)
     circle_angular_speed = rospy.get_param('~circle_angular_speed', 0.1)
@@ -99,14 +99,18 @@ if __name__ == '__main__':
     leader_vel = rospy.Subscriber(leader_robot_name + '/cmd_vel', Twist, cmd_vel_cb)
     
     # Wait for the time to be published
-    rospy.sleep(3)
+    rospy.sleep(2)
 
     # Create the controller
-    while not rospy.is_shutdown():
-        controller = RobotController()
-        controller.readCurrentRaw()
+    controller = RobotController()
+    controller.readCurrentRaw()
 
-        # Set the mode (straight or circle)
-        controller.set_mode('straight') # set the initial mode to 'straight'
-        controller.run()
+    # Set the mode (straight or circle)
+    controller.set_mode('straight') # set the initial mode to 'straight'
+
+    # Wait for the time to be published
+    rospy.sleep(4)
+
+    # Run the leader robot
+    controller.run()
     
