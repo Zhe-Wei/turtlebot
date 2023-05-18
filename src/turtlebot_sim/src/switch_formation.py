@@ -11,112 +11,139 @@ import math
 slave1_x, slave1_y, slave2_x, slave2_y = 0, 0, 0, 0
 tmp_slave1_x, tmp_slave1_y, tmp_slave2_x, tmp_slave2_y = 0, 0, 0, 0
 switching = False
-
-
-def switch_formation():
-    global tmp_slave1_x, tmp_slave1_y, tmp_slave2_x, tmp_slave2_y
-    
-    tmp_slave1_x = -0.8
-    tmp_slave1_y = 0
-    rospy.sleep(4)
-    tmp_slave2_x = -1.6
-    tmp_slave2_y = 0
-
-
-def callback_function(event):
-    # Perform necessary actions here
-    print("Switch_formation")
-    switch_formation()
-
-
-def start_timer():
-    # Create a timer that expires after 10 seconds
-    rospy.Timer(rospy.Duration(20), callback_function)
+trans_1, rot_1, trans_2, rot_2 = None, None, None, None
 
 
 def lidar_callback(scan_data):
 
-    def isNarrowPath(scan_data):# check if there have two obstacles in front of the leader robot
-        global tmp_slave1_x, tmp_slave1_y, tmp_slave2_x, tmp_slave2_y
-        global switching
-        MAX_DISTANCE = 5
+    # get the width of the path
+    def getPathWidth(scan_data):
+        deg = setDegree
+        a1 = scan_data.ranges[deg]
+        b1 = scan_data.ranges[360-deg]
+        a2 = scan_data.ranges[deg+10]
+        b2 = scan_data.ranges[360-deg-10]
+        a3 = scan_data.ranges[deg+20]
+        b3 = scan_data.ranges[360-deg-20]
+        a4 = scan_data.ranges[deg+30]
+        b4 = scan_data.ranges[360-deg-30]
+        a5 = scan_data.ranges[deg+40]
+        b5 = scan_data.ranges[360-deg-40]
+        a6 = scan_data.ranges[deg+45]
+        b6 = scan_data.ranges[360-deg-45]
+        a7 = scan_data.ranges[deg+50]
+        b7 = scan_data.ranges[360-deg-50]
+        a8 = scan_data.ranges[deg+60]
+        b8 = scan_data.ranges[360-deg-60]
 
-        d1 = scan_data.ranges[setDegree]
-        d2 = scan_data.ranges[360-setDegree]
 
-        if scan_data.ranges[setDegree] > MAX_DISTANCE:
-            d1 = MAX_DISTANCE
-        if scan_data.ranges[360-setDegree] > MAX_DISTANCE:
-            d2 = MAX_DISTANCE
-        
-        print(f"L: {scan_data.ranges[setDegree]:.2f}, R: {scan_data.ranges[360-setDegree]:.2f}")
+        # cossine law to calculate the width of the path  c1=30(deg), c2=40(deg), c3=50(deg)
+        c1 = math.pow(((math.pow(a1,2)+math.pow(b1,2)) - 2*a1*b1*math.cos(math.radians(2*deg))), 0.5)
+        c2 = math.pow(((math.pow(a2,2)+math.pow(b2,2)) - 2*a2*b2*math.cos(math.radians(2*deg+20))), 0.5)
+        c3 = math.pow(((math.pow(a3,2)+math.pow(b3,2)) - 2*a3*b3*math.cos(math.radians(2*deg+40))), 0.5)
+        c4 = math.pow(((math.pow(a4,2)+math.pow(b4,2)) - 2*a4*b4*math.cos(math.radians(2*deg+60))), 0.5)
+        c5 = math.pow(((math.pow(a5,2)+math.pow(b5,2)) - 2*a5*b5*math.cos(math.radians(2*deg+80))), 0.5)
+        c6 = math.pow(((math.pow(a6,2)+math.pow(b6,2)) - 2*a6*b6*math.cos(math.radians(2*deg+90))), 0.5)
+        c7 = math.pow(((math.pow(a7,2)+math.pow(b7,2)) - 2*a7*b7*math.cos(math.radians(2*deg+100))), 0.5)
+        c8 = math.pow(((math.pow(a8,2)+math.pow(b8,2)) - 2*a8*b8*math.cos(math.radians(2*deg+120))), 0.5)
 
-        try:
-            d = math.pow(((math.pow(d1,2)+math.pow(d2,2)) - 2*d1*d2*math.cos(math.radians(2*setDegree))), 0.5)
-            #dislplay the distance float number .2f
-            print(f"d: {d:.2f}")
-        except:
-            # Have inf value in d1 or d2
-            print(f"{d1:.2f}, {d2:.2f}")
+        # if c1 ~ c4 is nan value, set it to 5m
+        if math.isnan(c1) or c1 == "inf": c1 = 99
+        if math.isnan(c2) or c2 == "inf": c2 = 99
+        if math.isnan(c3) or c3 == "inf": c3 = 99
+        if math.isnan(c4) or c4 == "inf": c4 = 99
+        if math.isnan(c5) or c5 == "inf": c5 = 99
+        if math.isnan(c6) or c6 == "inf": c6 = 99
+        if math.isnan(c7) or c7 == "inf": c7 = 99
+        if math.isnan(c8) or c8 == "inf": c8 = 99
 
-        if switching == True:
-            pass
+        print(f"c1: {c1:.2f}, c2: {c2:.2f}, c3: {c3:.2f}, c4: {c4:.2f}")
+        nonlocal d_ij
+        d_ij = min(c1, c2, c3, c4, c5, c6, c7, c8)
+        print(f"d_ij: {d_ij:.2f}")
 
-        if d < 0.7 * (math.fabs(slave1_y) + math.fabs(slave2_y)):
-            def change_slave_2(event):
-                global tmp_slave1_x, tmp_slave1_y, tmp_slave2_x, tmp_slave2_y
-                if d < 0.7 * (math.fabs(slave1_y) + math.fabs(slave2_y)):
-                    tmp_slave2_x = -1.6
-                    tmp_slave2_y = 0
-            # tmp_slave1_y = (d / 2)
-            # tmp_slave2_y = -(d / 2)
-            print("Dangerous")
-            if switching == False and d < 0.7 * (math.fabs(slave1_y) + math.fabs(slave2_y)):
-                switching = True
+        return d_ij
 
-                tmp_slave1_x = -0.8
-                tmp_slave1_y = 0
-                # rospy.sleep(1)
-                rospy.Timer(rospy.Duration(3), change_slave_2, oneshot=True)
-                tmp_slave2_x = -1.6
-                tmp_slave2_y = 0
 
-                switching = False
-            else:
-                return
-            # rospy.sleep(.1)
-            print("Switch_formation")
-        elif d < 1.2 * (math.fabs(slave1_y) + math.fabs(slave2_y)):
-            tmp_slave1_x = slave1_x
-            tmp_slave2_x = slave2_x
-            tmp_slave1_y = (d / 2)
-            tmp_slave2_y = -(d / 2)
+    def getPriotity():
+        # calculate distance between leader
+        dis_1 = math.sqrt(trans_1[0] ** 2 + trans_1[1] ** 2)
+        dis_2 = math.sqrt(trans_2[0] ** 2 + trans_2[1] ** 2)
 
-            if math.fabs(tmp_slave1_y) + math.fabs(tmp_slave2_y) > math.fabs(slave1_y) + math.fabs(slave2_y):
-                tmp_slave1_x = slave1_x
-                tmp_slave2_x = slave2_x
-                tmp_slave1_y = slave1_y    
-                tmp_slave2_y = slave2_y
-
-            print("Not safe")
+        # calculate priority
+        if dis_1 < dis_2:
+            priority = 1
+        elif dis_1 > dis_2:
+            priority = 2
         else:
-            tmp_slave1_x = slave1_x
-            tmp_slave2_x = slave2_x
-            tmp_slave1_y = slave1_y
-            tmp_slave2_y = slave2_y
-            print("Safe")
+            priority = 1
 
-        print('----------------------\n')
-        # if d < dangerDistance:
-        #     print("Dangerous")
-        # elif d < safeDistance:
-        #     print("Not safe")
-        # else:
-        #     print("Safe")
-    
+        return priority
     
 
-    isNarrowPath(scan_data)
+    def switch_formation(pri):
+        nonlocal d_ij
+        global tmp_slave1_x, tmp_slave1_y, tmp_slave2_x, tmp_slave2_y
+        print("--------------------")
+        print(f"pri: {pri}")
+        # turtlebot size = 	281mm x 306mm x 141mm => set 0.4m as the safe distance
+        r_p =  0.4
+        d_m = 0.5 * d_ij
+        d_iw = d_m - r_p
+        l_i = math.sqrt(math.pow(tmp_slave2_x, 2) + math.pow(tmp_slave2_y, 2))
+        print(f"d_ij: {d_ij:.2f}, d_m: {d_m:.2f}, d_iw: {d_iw:.2f}, l_i: {l_i:.2f}")
+        
+        tmp_slave2_x = -math.sqrt(math.pow(l_i, 2) - math.pow(d_iw, 2)) # 負號代表在leader後方
+        tmp_slave2_y = -d_iw
+
+        d_jw = d_iw
+        try:
+            # tmp = math.sqrt(math.pow((2 * r_p), 2) - math.pow((d_iw + d_jw), 2))
+            tmp = 2 * r_p + math.fabs(tmp_slave2_x)
+        except:
+            tmp = 2 * r_p + math.fabs(tmp_slave2_x)
+        print(f"d_jw: {d_jw:.2f} tmp: {tmp:.2f}")
+        
+        # l_j = math.sqrt(math.pow(tmp, 2) + math.pow(d_jw, 2))
+
+        tmp_slave1_x = -tmp
+        tmp_slave1_y = d_jw
+
+        print(f"slave1 ({tmp_slave1_x:.2f}, {tmp_slave1_y:.2f}), slave2 ({tmp_slave2_x:.2f}, {tmp_slave2_y:.2f})")
+
+
+    # isNarrowPath(scan_data)
+    global tmp_slave1_x, tmp_slave1_y, tmp_slave2_x, tmp_slave2_y
+    global slave1_x, slave1_y, slave2_x, slave2_y
+    global switching
+    d_ij = 0
+    d_m = 0
+    d_ij = getPathWidth(scan_data)
+
+
+    # 陣行水平寬度半徑設定 d_f=(|y1|+|y2|+variable)/2, variable=保留給機器人本身
+    df = (math.fabs(slave1_y) + math.fabs(slave2_y) + 0.4) / 2
+    print(f"s1_y: {slave1_y:.2f}, s2_y: {slave2_y:.2f}, df: {df:.2f}")
+
+    # 陣形半徑設定 d_formation_r
+    d_formation_r = math.sqrt(math.pow(slave1_x, 2) + math.pow(slave1_y, 2)) + 0.55
+    print(f"d_formation_r: {d_formation_r:.2f}")
+
+    if (0.5 * d_ij) < df: # 陣形過窄，切換陣形
+        switching = 1
+        print("Narrow path")
+        pri = getPriotity()
+        switch_formation(pri)
+    elif switching == 1 and scan_data.ranges[135] > d_formation_r and scan_data.ranges[360-135] > d_formation_r: 
+        # 偵測左後方與右後方是否有足夠空間->恢復陣形
+        switching = 0
+        tmp_slave1_x = slave1_x
+        tmp_slave1_y = slave1_y
+        tmp_slave2_x = slave2_x
+        tmp_slave2_y = slave2_y
+        print("Wide path")
+    print()
+
         
 
 if __name__ == '__main__':
@@ -151,8 +178,9 @@ if __name__ == '__main__':
     # Create a transform broadcaster
     br = tf.TransformBroadcaster()
 
-    # Start the timer
-    # start_timer()
+    # create transform listener
+    listener1 = tf.TransformListener()
+    listener2 = tf.TransformListener()
 
     # Initialize slave1 and slave2 position
     tmp_slave1_x = slave1_x
@@ -161,6 +189,19 @@ if __name__ == '__main__':
     tmp_slave2_y = slave2_y
 
     while not rospy.is_shutdown():
+        try:
+            # global trans_1, rot_1, trans_2, rot_2
+            (trans_1, rot_1) = listener1.lookupTransform(slave1_robot_name+'/base_link', leader_robot_name+'/base_link', rospy.Time())
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            rospy.loginfo("Wait for robot_1 tf")
+            continue
+
+        try:
+            (trans_2, rot_2) = listener2.lookupTransform(slave2_robot_name+'/base_link', leader_robot_name+'/base_link', rospy.Time())
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            rospy.loginfo("Wait for robot_2 tf")
+            continue
+        
         # Publish the transform over tf
         br.sendTransform((tmp_slave1_x, tmp_slave1_y, 0),
                          tf.transformations.quaternion_from_euler(0, 0, 0),
@@ -174,5 +215,3 @@ if __name__ == '__main__':
                          leader_robot_name + '/' + "base_footprint")
     
         rate.sleep()
-
-    
