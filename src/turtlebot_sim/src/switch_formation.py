@@ -84,31 +84,54 @@ def lidar_callback(scan_data):
     def switch_formation(pri):
         nonlocal d_ij
         global tmp_slave1_x, tmp_slave1_y, tmp_slave2_x, tmp_slave2_y
+        global slave1_x, slave1_y, slave2_x, slave2_y
         print("--------------------")
         print(f"pri: {pri}")
-        # turtlebot size = 	281mm x 306mm x 141mm => set 0.4m as the safe distance
+        # r_p = robot protection distance, turtlebot size = 281mm x 306mm x 141mm => set 0.4m as the safe distance
         r_p =  0.4
         d_m = 0.5 * d_ij
         d_iw = d_m - r_p
-        l_i = math.sqrt(math.pow(tmp_slave2_x, 2) + math.pow(tmp_slave2_y, 2))
+        if d_iw < 0:
+            raise Exception("d_iw < 0")
+
+        # l_i 維持與leader的距離
+        if pri == 2:
+            l_i = math.sqrt(math.pow(slave2_x, 2) + math.pow(slave2_y, 2))
+        else:
+            l_i = math.sqrt(math.pow(slave1_x, 2) + math.pow(slave1_y, 2))
+        
+
         print(f"d_ij: {d_ij:.2f}, d_m: {d_m:.2f}, d_iw: {d_iw:.2f}, l_i: {l_i:.2f}")
         
-        tmp_slave2_x = -math.sqrt(math.pow(l_i, 2) - math.pow(d_iw, 2)) # 負號代表在leader後方
-        tmp_slave2_y = -d_iw
+        if pri == 2:
+            tmp_slave2_x = -math.sqrt(math.pow(l_i, 2) - math.pow(d_iw, 2)) # 負號代表在leader後方
+            tmp_slave2_y = -d_iw
+        else:
+            tmp_slave1_x = -math.sqrt(math.pow(l_i, 2) - math.pow(d_iw, 2))
+            tmp_slave1_y = d_iw
 
         d_jw = d_iw
-        try:
-            # tmp = math.sqrt(math.pow((2 * r_p), 2) - math.pow((d_iw + d_jw), 2))
-            tmp = 2 * r_p + math.fabs(tmp_slave2_x)
-        except:
-            tmp = 2 * r_p + math.fabs(tmp_slave2_x)
-        print(f"d_jw: {d_jw:.2f} tmp: {tmp:.2f}")
-        
-        # l_j = math.sqrt(math.pow(tmp, 2) + math.pow(d_jw, 2))
 
-        tmp_slave1_x = -tmp
-        tmp_slave1_y = d_jw
-
+        if pri == 2:
+            try:
+                # tmp = math.sqrt(math.pow((2 * r_p), 2) - math.pow((d_iw + d_jw), 2))
+                tmp = 2 * r_p + math.fabs(tmp_slave2_x)
+            except:
+                tmp = 2 * r_p + math.fabs(tmp_slave2_x)
+            print(f"d_jw: {d_jw:.2f} tmp: {tmp:.2f}")
+            # l_j = math.sqrt(math.pow(tmp, 2) + math.pow(d_jw, 2))
+            tmp_slave1_x = -tmp
+            tmp_slave1_y = d_jw
+        else:
+            try:
+                # tmp = math.sqrt(math.pow((2 * r_p), 2) - math.pow((d_iw + d_jw), 2))
+                tmp = 2 * r_p + math.fabs(tmp_slave1_x)
+            except:
+                tmp = 2 * r_p + math.fabs(tmp_slave1_x)
+            print(f"d_jw: {d_jw:.2f} tmp: {tmp:.2f}")
+            # l_j = math.sqrt(math.pow(tmp, 2) + math.pow(d_jw, 2))
+            tmp_slave2_x = -tmp
+            tmp_slave2_y = -d_jw
         print(f"slave1 ({tmp_slave1_x:.2f}, {tmp_slave1_y:.2f}), slave2 ({tmp_slave2_x:.2f}, {tmp_slave2_y:.2f})")
 
 
