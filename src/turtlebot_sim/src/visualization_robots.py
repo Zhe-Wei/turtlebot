@@ -92,7 +92,7 @@ class Show_Master2Slave_Error(object):
 
         # Calculate the error distance
         # try:
-        frame_1 = master_robot_name + '/' + slave_robot_name
+        frame_1 = 'ori_' + master_robot_name + '/' + slave_robot_name
         frame_2 = slave_robot_name + '/base_footprint'
         (trans, rot) = self.listener.lookupTransform(frame_1, frame_2, rospy.Time(0))
         # print(trans)

@@ -4,28 +4,37 @@
 	<arg name="slave_robot_1" value="robot_1"/>
     <arg name="slave_robot_2" value="robot_2"/>
 
-	<arg name="slave1_x" value="-1.2"/> 
-	<arg name="slave1_y" value="1.2"/>
+	<arg name="slave1_x" value="-0.8"/> 
+	<arg name="slave1_y" value="0.8"/>
 
-    <arg name="slave2_x" value="-1.2"/>
-    <arg name="slave2_y" value="-1.2"/>
+    <arg name="slave2_x" value="-0.8"/>
+    <arg name="slave2_y" value="-0.8"/>
 
-	<node pkg="tf" type="static_transform_publisher" name="base_to_$(arg slave_robot_1)" args="$(arg slave1_x) $(arg slave1_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint $(arg leader_robot_name)/$(arg slave_robot_1) 100" />
-    <node pkg="tf" type="static_transform_publisher" name="base_to_$(arg slave_robot_2)" args="$(arg slave2_x) $(arg slave2_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint $(arg leader_robot_name)/$(arg slave_robot_2) 100" /> 
+	<node pkg="tf" type="static_transform_publisher" name="base_to_$(arg slave_robot_1)" args="$(arg slave1_x) $(arg slave1_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint ori_$(arg leader_robot_name)/$(arg slave_robot_1) 100" />
+    <node pkg="tf" type="static_transform_publisher" name="base_to_$(arg slave_robot_2)" args="$(arg slave2_x) $(arg slave2_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint ori_$(arg leader_robot_name)/$(arg slave_robot_2) 100" /> 
     
     <!-- publish slave(s) expected location -->
-    <!-- <node pkg="turtlebot_sim" type="switch_formation.py" name="switch_formation"/> -->
+    <node pkg="turtlebot_sim" type="switch_formation.py" name="switch_formation" output="screen">
+        <param name="leader_robot_name" value="$(arg leader_robot_name)" />
+        <param name="slave_robot_1" value="$(arg slave_robot_1)" />
+        <param name="slave_robot_2" value="$(arg slave_robot_2)" />
+        <param name="slave1_x" type="double" value="$(arg slave1_x)" />
+        <param name="slave1_y" type="double" value="$(arg slave1_y)" />
+        <param name="slave2_x" type="double" value="$(arg slave2_x)" />
+        <param name="slave2_y" type="double" value="$(arg slave2_y)" />
+    </node>
 
     <param name="max_vel_x" value="0.8" />
     <param name="min_vel_x" value="0.05" />
     <param name="max_vel_theta" value="0.8" />
     <param name="min_vel_theta" value="0.05" />
     
-    <arg name="PID" value="false" /> <!-- True(PID) or False(Fuzzy) -->
-    <arg name="avoidance" value="true"/>
+    <arg name="PID" value="true" /> <!-- True(PID) or False(Fuzzy) -->
+    <arg name="avoidance" value="false"/>
+    <arg name="reset_gazebo" value="true"/>
 
     <!-- Reset gazebo : equivalent to "rosservice call /gazebo/reset_simulation" -->
-    
+
     <node pkg="rosservice" type="rosservice" name="global_loc2" args="call --wait /gazebo/reset_simulation" />
 
     <!-- Move leader robot automatically -->
