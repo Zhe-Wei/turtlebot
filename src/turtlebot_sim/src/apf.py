@@ -8,6 +8,7 @@ from geometry_msgs.msg import Twist
 import tf
 from tf import transformations
 from tf import broadcaster
+from std_msgs.msg import Int32, Bool
 
 import math
 import numpy as np
@@ -18,15 +19,12 @@ from matplotlib import pyplot as plt
 PI = 3.14
 USER_FORCE = 1 # Change this to prioritize goal
 ROBOT_RADIUS = 0.2 # Change this to robot's dimensions.
-MAX_DISTANCE = 0.8
-FACTOR_ANGULAR = 400
 DEBUG = False
 
 # Declaring global variables
 user_input = 180
-# theta_pub = rospy.Publisher('/tunnel/direction', Float32, queue_size=1)
-# f_pub = rospy.Publisher('/tunnel/velocity', Float32, queue_size=1)
-# pcl_pub = rospy.Publisher('/pcl_lidar', PointCloud2, queue_size=1)
+max_distance = 1.2
+factor_angular = 400
 
 
 fig, axs = None, None
@@ -38,13 +36,16 @@ vel_pub = None
 leader_robot_name = None
 follower_robot_name = None
 
+switching = False
+
 def userCallback(user_data):
     global user_input
     user_input = user_data.data
 
 
 def callback(scan_in):
-    global cmd_vel_Pub, cmd_vel_msg, cmd_vel_data, user_input 
+    global vel_pub, cmd_vel_msg, cmd_vel_data, user_input 
+    global switching
 
     # Copy lidar data
     scan_filtered = scan_in
@@ -54,15 +55,20 @@ def callback(scan_in):
     total_points = int((scan_filtered.angle_max - scan_filtered.angle_min) / scan_filtered.angle_increment)
     force = 0
 
+    # if switching is true, ouput original velocity
+    if switching:
+        vel_pub.publish(cmd_vel_data)
+        return
+
     # Preprocess LIDAR data to remove inf values and remove 0 values.
     for i in range(total_points+1):
         # Remove inf values from LIDAR data
-        if scan_filtered.ranges[i] > MAX_DISTANCE:
-            scan_filtered.ranges[i] = MAX_DISTANCE
+        if scan_filtered.ranges[i] > max_distance:
+            scan_filtered.ranges[i] = max_distance
 
         # If there are 0 readings, make them the LIDAR sensor's maximum range.
         if scan_filtered.ranges[i] == 0:
-            scan_filtered.ranges[i] = MAX_DISTANCE
+            scan_filtered.ranges[i] = max_distance
 
         # Make the robot a point by subtracting the robot radius from the reading.
         # if scan_filtered.ranges[i] > ROBOT_RADIUS:
@@ -92,9 +98,14 @@ def callback(scan_in):
     y_datas = []
 
     for i in range(total_points):
-        if scan_filtered.ranges[i] != MAX_DISTANCE:
-            x = scan_filtered.ranges[i] * math.cos(i * PI / 180)
-            y = scan_filtered.ranges[i] * math.sin(i * PI / 180)
+        if i > 90 and i < 270:
+            x_datas.append(0)
+            y_datas.append(0)
+            continue
+        if scan_filtered.ranges[i] != max_distance:
+            x = scan_filtered.ranges[i] * math.cos((i + 0) * PI / 180)
+            y = scan_filtered.ranges[i] * math.sin((i + 0) * PI / 180)
+            # print(f"x = {np.round(x, 2)}, y = {np.round(y, 2)}")
 
             if scan_filtered.ranges[i] > 0:
                 # # Transforming to robot frame
@@ -102,9 +113,9 @@ def callback(scan_in):
                 # y = x_lidar * math.sin(-90 * PI / 180) + y_lidar * math.cos(-90 * PI / 180)
                 # The scale is inverted to make nearer obstacles have higher force and the scale is reduced to 1.
                 if abs(x) > 0:
-                    x = -1 / x
+                    x = -1 / math.pow(x, 2) * math.copysign(1, x)
                 if abs(y) > 0:
-                    y = -1 / y
+                    y = -1 / math.pow(y, 2) * math.copysign(1, y)
 
                 x_datas.append(x/1)
                 y_datas.append(y/1)
@@ -156,19 +167,18 @@ def callback(scan_in):
     # calculate angular velocity theta/(2*100)
     w = 0
     if theta > 180: # 180 ~ 360 右轉
-        w = (theta - 360) / FACTOR_ANGULAR
+        w = (theta - 360) / factor_angular
     else: # 0 ~ 180 左轉
-        w = theta / FACTOR_ANGULAR 
+        w = theta / factor_angular 
     if DEBUG:
         print(f"w = {np.round(w, 2)}")
 
     # user input added to the resultant force
-    uesr_x = 1
+    user_x = 1
     user_y = 0
-
     # The resultant force is calculated
-    agg_x = resultant_x + user_x
-    agg_y = resultant_y + user_y
+    agg_x = resultant_x
+    agg_y = resultant_y
     if DEBUG:
         print(f"agg_x = {np.round(agg_x, 2)}, agg_y = {np.round(agg_y, 2)}")
 
@@ -178,11 +188,35 @@ def callback(scan_in):
         print(f"agg_theta = {np.round(agg_theta, 2)}")
 
     # publish the velocity
-    global vel_pub
     vel_msg = Twist()
     vel_msg.linear.x = cmd_vel_data.linear.x
-    vel_msg.angular.z = 1.8 * w + cmd_vel_data.angular.z
-    # vel_pub.publish(vel_msg)
+
+    # 沒有障礙物
+    if force_x == 0 and force_y == 0:
+        vel_msg.angular.z = cmd_vel_data.angular.z
+    else:
+        # 障礙物在前方
+        if theta < 30 or theta > 330:
+            vel_msg.angular.z = 2 * w + 0.8 * cmd_vel_data.angular.z   
+        # 障礙物在其他地方
+        else:
+            vel_msg.angular.z = 2 * w + 0.8 * cmd_vel_data.angular.z
+
+    # 障礙物在正面
+    if resultant_y <= -0.95:
+        vel_msg.linear.x = -0.15
+        vel_msg.angular.z = 0.1
+
+    # 障礙物在後方
+    if resultant_y >= 0.9:
+        vel_msg.linear.x = 0.4
+        vel_msg.angular.z = 0
+    # 障礙物在正左右方
+    if resultant_x <= -0.8 or resultant_x >= 0.8:
+        vel_msg.linear.x = 0.4
+        vel_msg.angular.z = 2 * w + 0.5 * cmd_vel_data.angular.z
+
+    vel_pub.publish(vel_msg)
     
     if False:
         # Plot the LIDAR data
@@ -218,12 +252,13 @@ def callback(scan_in):
 
 
     # global theta
-    if True:
+    if False:
         plt.clf()
         plt.title(f"Robot name = {follower_robot_name}\n\
                   force_x = {np.round(force_x, 2)}, force_y = {np.round(force_y, 2)}\n\
                   resultant_x = {np.round(resultant_x, 2)}, resultant_y = {np.round(resultant_y, 2)}\n\
-                  theta = {np.round(theta, 2)}"
+                  theta = {np.round(theta, 2)}, w = {np.round(w, 2)}, vel_msg.linear.x = {np.round(vel_msg.linear.x, 2)}\n\
+                  vel_msg.linear.x = {np.round(vel_msg.linear.x, 2)}, vel_msg.angular.z = {np.round(vel_msg.angular.z, 2)}\n"
                   )
         plt.plot(scan_filtered.ranges)
         plt.plot(np.array(x_datas)/ norm_factor)
@@ -259,22 +294,37 @@ def cmd_vel_ori_Callback(msg):
 
     # print("cmd_vel_ori_Callback")
 
+def switchingCallback(msg):
+    global switching
+
+    switching = msg.data
+    # print("switchingCallback")
+
 
 def main():
     # Initialize the node
     rospy.init_node('potential_field')
     print("potential_field node started\n")
 
+    global max_distance, cmd_vel_msg
     # Get the parameters
     leader_robot_name = rospy.get_param('~leader_robot_name', "robot_0")
     follower_robot_name = rospy.get_param('~follower_robot_name', "robot_1")
-
+    # max_vel_x = rospy.get_param('~max_vel_x', 1.5)
+    # min_vel_x = rospy.get_param('~min_vel_x', 0.05)
+    # max_vel_theta = rospy.get_param('~max_vel_theta', 1.5)
+    # min_vel_theta = rospy.get_param('~min_vel_theta', 0.05)
+    max_distance = rospy.get_param('~max_distance', 0.8)
+    
     # Subscribing to user input which is the goal direction
     # rospy.Subscriber('/tunnel/user_input', Float32, userCallback)
     rospy.Subscriber(f'/{follower_robot_name}/scan', LaserScan, callback)
 
     # Subscribing to the velocity of the slave robot
     vel_sub = rospy.Subscriber(f'/{follower_robot_name}/cmd_vel_ori', Twist, cmd_vel_ori_Callback)
+
+    # Subscribing switching topic from leader robot
+    rospy.Subscriber(f'/{leader_robot_name}/switching', Bool, switchingCallback)
 
     # Publish the velocity of the slave robot
     global vel_pub
@@ -296,9 +346,8 @@ def main():
             frame_2 = f"{leader_robot_name}/{follower_robot_name}"
 
             (trans, rot) = listener.lookupTransform(frame_1, frame_2, rospy.Time())
-
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            print("Waiting for TF data or no TF data available")
+            rospy.loginfo("Waiting for TF data or no TF data available [apf.py]")
             rospy.sleep(1)
             continue
         if DEBUG:

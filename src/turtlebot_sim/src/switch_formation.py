@@ -3,6 +3,7 @@
 import rospy
 import tf
 from tf import transformations
+from std_msgs.msg import Int32, Bool
 from geometry_msgs.msg import PointStamped
 from geometry_msgs.msg import Twist
 from sensor_msgs.msg import LaserScan
@@ -12,7 +13,7 @@ slave1_x, slave1_y, slave2_x, slave2_y = 0, 0, 0, 0
 tmp_slave1_x, tmp_slave1_y, tmp_slave2_x, tmp_slave2_y = 0, 0, 0, 0
 switching = False
 trans_1, rot_1, trans_2, rot_2 = None, None, None, None
-
+# leader_w = 0
 
 def lidar_callback(scan_data):
 
@@ -142,14 +143,16 @@ def lidar_callback(scan_data):
     d_ij = 0
     d_m = 0
     d_ij = getPathWidth(scan_data)
-
+    
+    # leader robot 沿著中心線行進
+    # center_leader_robot(scan_data)
 
     # 陣行水平寬度半徑設定 d_f=(|y1|+|y2|+variable)/2, variable=保留給機器人本身
     df = (math.fabs(slave1_y) + math.fabs(slave2_y) + 0.4) / 2
     print(f"s1_y: {slave1_y:.2f}, s2_y: {slave2_y:.2f}, df: {df:.2f}")
 
-    # 陣形半徑設定 d_formation_r
-    d_formation_r = math.sqrt(math.pow(slave1_x, 2) + math.pow(slave1_y, 2)) + 0.55
+    # 陣形半徑設定 d_formation_r，此參數給leader通過障礙物時使用，判斷何時恢復陣行
+    d_formation_r = math.sqrt(math.pow(slave1_x, 2) + math.pow(slave1_y, 2)) + 1.2
     print(f"d_formation_r: {d_formation_r:.2f}")
 
     if (0.5 * d_ij) < df: # 陣形過窄，切換陣形
@@ -167,8 +170,6 @@ def lidar_callback(scan_data):
         print("Wide path")
     print()
 
-        
-
 if __name__ == '__main__':
 
     # Initialize the node
@@ -185,12 +186,15 @@ if __name__ == '__main__':
     slave2_robot_name = rospy.get_param('~slave_robot_2', "robot_2")
 
     setDegree = rospy.get_param('~setDegree', 30)
-    dangerDistance = rospy.get_param('~dangerDistance', 0.8)
-    safeDistance = rospy.get_param('~safeDistance', 1)
+    # dangerDistance = rospy.get_param('~dangerDistance', 0.8)
+    # safeDistance = rospy.get_param('~safeDistance', 1)
 
 
     # publish /robot0/cmd_vel
-    pub = rospy.Publisher(f'/{leader_robot_name}/cmd_vel', Twist, queue_size=10)
+    leader_pub = rospy.Publisher(f'/{leader_robot_name}/cmd_vel', Twist, queue_size=10)
+    
+    # publish switching topic
+    switching_pub = rospy.Publisher(f'/{leader_robot_name}/switching', Bool, queue_size=10)
 
     # subscribe leader robot's /scan
     rospy.Subscriber(f'/{leader_robot_name}/scan', LaserScan, lidar_callback)
@@ -216,13 +220,13 @@ if __name__ == '__main__':
             # global trans_1, rot_1, trans_2, rot_2
             (trans_1, rot_1) = listener1.lookupTransform(slave1_robot_name+'/base_link', leader_robot_name+'/base_link', rospy.Time())
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            rospy.loginfo("Wait for robot_1 tf")
+            rospy.loginfo(f"Wait for robot_1 tf. [switch_formation.py]")
             continue
 
         try:
             (trans_2, rot_2) = listener2.lookupTransform(slave2_robot_name+'/base_link', leader_robot_name+'/base_link', rospy.Time())
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-            rospy.loginfo("Wait for robot_2 tf")
+            rospy.loginfo(f"Wait for robot_2 tf. [switch_formation.py]")
             continue
         
         # Publish the transform over tf
@@ -236,5 +240,9 @@ if __name__ == '__main__':
                          rospy.Time.now(),
                          leader_robot_name + '/' + slave2_robot_name,
                          leader_robot_name + '/' + "base_footprint")
-    
+        
+        # Publish switching topic to slave robots
+        # inform them to switch formation and follower close apf algorithm
+        switching_pub.publish(switching)
+
         rate.sleep()
