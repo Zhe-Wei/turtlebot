@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 
 import tf
 import re
+import csv
+import os
 # import message_filters
 # import matplotlib.animation as animation
 # from geometry_msgs.msg import Pose, PoseStamped, TransformStamped, Point, Quaternion, PoseWithCovarianceStamped
@@ -56,12 +58,6 @@ class TFListenerNode(object):
         arrow_length = 0.5
         ax1.arrow(x, y, arrow_length*np.cos(orientation), arrow_length*np.sin(orientation), head_width=0.2, head_length=0.1, fc='k', ec='k')
 
-    # def get_translation(self):
-    #     try:
-    #         (trans, rot) = self.listener.lookupTransform('world', self.robot_name+'/base_footprint', rospy.Time(0))
-    #         return trans
-    #     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
-    #         return None
 
 class Show_Master2Slave_Error(object):
     y_min = -0.5
@@ -84,15 +80,15 @@ class Show_Master2Slave_Error(object):
         self.time_list.append(rospy.Time.now().to_sec() - start_time)
 
         # ax3.cla()
-        ax3.set_xlabel('Time')
-        ax3.set_ylabel('Distance')
-        ax3.set_title('Error Distance')
+        ax3.set_xlabel('Time(s)')
+        ax3.set_ylabel('Distance(m)')
+        ax3.set_title('Relative Error Distance')
 
         ax3.legend()
 
         # Calculate the error distance
         # try:
-        frame_1 = 'ori_' + master_robot_name + '/' + slave_robot_name
+        frame_1 = '' + master_robot_name + '/' + slave_robot_name
         frame_2 = slave_robot_name + '/base_footprint'
         (trans, rot) = self.listener.lookupTransform(frame_1, frame_2, rospy.Time(0))
         # print(trans)
@@ -113,7 +109,7 @@ class Show_Master2Slave_Error(object):
         
 
 def main():
-    rospy.init_node('tf_listener')
+    rospy.init_node('visualization_robots')
 
     # Get the robot name from the launch file
     master_robot_name = rospy.get_param('~master_robot_name', 'robot_0')
@@ -211,7 +207,7 @@ def main():
         ax3.clear()
         ax3.set_xlabel('Time')
         ax3.set_ylabel('Distance')
-        ax3.set_title('Error Distance')
+        ax3.set_title('Relative Error Distance')
         distance_error_1.error_distance_list.clear()
         distance_error_1.time_list.clear()
         distance_error_2.error_distance_list.clear()

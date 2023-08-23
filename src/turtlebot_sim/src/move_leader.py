@@ -67,6 +67,15 @@ class RobotController():
                         self.circle_complete = True
                         # self.move_robot(0.0, 0.0)
                         rospy.loginfo('Circle complete')
+                        
+                        # slow down leader robot
+                        while leader_linear_x > 0.1 or leader_angular_z > 0.1:
+                            if leader_linear_x > 0.1:
+                                leader_linear_x = leader_linear_x - 0.05
+                            if leader_angular_z > 0.1:
+                                leader_angular_z = leader_angular_z - 0.2
+                            rospy.sleep(0.8)
+                            self.move_robot(leader_linear_x, leader_angular_z)
                         rospy.signal_shutdown('Circle complete')
             self.rate.sleep()
 
@@ -92,21 +101,22 @@ if __name__ == '__main__':
     circle_linear_speed = rospy.get_param('~circle_linear_speed', 0.5)
     circle_angular_speed = rospy.get_param('~circle_angular_speed', 0.1)
 
+    # Wait for the time to be published
+    rospy.sleep(2)
+    
     # Subscribe to the odom topic
     leader_odom = rospy.Subscriber(leader_robot_name + '/odom', Odometry, odom_cb)
 
     # Subscribe to the cmd_vel topic
     leader_vel = rospy.Subscriber(leader_robot_name + '/cmd_vel', Twist, cmd_vel_cb)
     
-    # Wait for the time to be published
-    rospy.sleep(2)
 
     # Create the controller
     controller = RobotController()
     controller.readCurrentRaw()
 
     # Set the mode (straight or circle)
-    controller.set_mode('straight') # set the initial mode to 'straight'
+    controller.set_mode(mode) # set the initial mode to 'straight'
 
     # Wait for the time to be published
     rospy.sleep(4)
