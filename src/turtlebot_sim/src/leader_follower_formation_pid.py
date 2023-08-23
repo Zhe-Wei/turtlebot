@@ -28,9 +28,10 @@ min_vel_x=0.05
 max_vel_theta=3.0
 min_vel_theta=0.05
 
-k_v=1
-k_l=1
-k_a=1
+k_odom = 0
+k_v = 0
+k_l = 0
+k_a = 0
 
 # Master robot's velocity
 odom_linear_x=0
@@ -68,6 +69,7 @@ if __name__ == '__main__':
     min_vel_x = rospy.get_param("~min_vel_x", 0.05)
     max_vel_theta = rospy.get_param("~max_vel_theta", 1.0)
     min_vel_theta = rospy.get_param("~min_vel_theta", 0.05)
+    k_odom = rospy.get_param("~k_odom", 1)
     k_v = rospy.get_param("~k_v", 1)
     k_l = rospy.get_param("~k_l", 1)
     k_a = rospy.get_param("~k_a", 1)
@@ -85,7 +87,7 @@ if __name__ == '__main__':
     print("k_v: ", k_v)
     print("k_l: ", k_l)
     print("k_a: ", k_a)
-    rospy.sleep(3)
+    rospy.sleep(2)
 
     # Subscribe to the leader robot's odometry
     leader_vel = rospy.Subscriber(leader_robot_name + "/odom", Odometry, odom_cb)
@@ -155,7 +157,11 @@ if __name__ == '__main__':
 
         # Calculate the angular turn to the slave
         if math.fabs(e_linear_x) < 5: # x軸差距小於5時，以leader的r計算
-            angular_turn = math.atan2(slave_y, odom_linear_x/odom_angular_z)
+            try:
+                angular_turn = math.atan2(slave_y, odom_linear_x/odom_angular_z)
+            except ZeroDivisionError:
+                print("ZeroDivisionError")
+                continue
         else: # x軸差距大於5時
             angular_turn = math.atan2(slave_y, slave_x)
 
@@ -199,19 +205,22 @@ if __name__ == '__main__':
             vel_msg.linear.x = odom_linear_x + k_v * e_linear_x
 
         # k_l 表示error_y的影響力，k_a表示error_z的影響力
+        _k_odom = k_odom
         _k_a = k_a
         _k_l = k_l
+        print("_k_odom: ", _k_odom, "_k_a: ", _k_a, "_k_l: ", _k_l)
+        print("-----------------------------------------------------")
 
-        if (math.fabs(odom_linear_x) < min_vel_x) and math.fabs(e_linear_x) < 0.1 and math.fabs(e_linear_y) < 0.1 and math.fabs(e_angular_z) < 0.1: # When the slave car is not moving, the parameters are set to 0
-            _k_l = 1 * _k_a
-            _k_a = 2 * _k_l
+        # if (math.fabs(odom_linear_x) < min_vel_x) and math.fabs(e_linear_x) < 0.1 and math.fabs(e_linear_y) < 0.1 and math.fabs(e_angular_z) < 0.1: # When the slave car is not moving, the parameters are set to 0
+        #     _k_l = 1 * _k_a
+        #     _k_a = 2 * _k_l
 
-        if vel_msg.linear.x < -min_vel_x: # When the slave car is reversing, correct the signs of the parameters to be opposite to those when it is moving forward
-            if abs(odom_angular_z) > min_vel_theta:
-                _k_a = -k_a # _k_a parameter is positive for forward motion
-                _k_l = -k_l
+        # if vel_msg.linear.x < -min_vel_x: # When the slave car is reversing, correct the signs of the parameters to be opposite to those when it is moving forward
+        #     if abs(odom_angular_z) > min_vel_theta:
+        #         _k_a = -k_a # _k_a parameter is positive for forward motion
+        #         _k_l = -k_l
 
-        vel_msg.angular.z = odom_angular_z + _k_l * e_linear_y + _k_a * math.sin(e_angular_z)
+        vel_msg.angular.z = _k_odom * odom_angular_z + _k_l * e_linear_y + _k_a * math.sin(e_angular_z)
 
         if vel_msg.linear.x > max_vel_x:
             vel_msg.linear.x = max_vel_x # Velocity limit
