@@ -16,7 +16,8 @@
     <!-- Start gazebo world -->
     <include file="$(find gazebo_ros)/launch/empty_world.launch">
         <arg name="world_name" value="$(find turtlebot3_gazebo)/worlds/empty.world"/>
-        <!-- <arg name="world_name" value="$(find turtlebot_sim)/worlds/10x10.world"/> -->
+        <!-- <arg name="world_name" value="$(find turtlebot_sim)/worlds/6x20.world"/> -->
+        <!-- <arg name="world_name" default="$(find turtlebot_sim)/worlds/room_mini.world" /> -->
         <arg name="paused" value="false"/>
         <arg name="use_sim_time" value="true"/>
         <arg name="gui" value="true"/>
@@ -33,9 +34,12 @@
     <include file="$(find turtlebot_sim)/launch/robots.launch"/>
 
     <!-- publish static tf (world to robot_x/odom)-->
-    <node pkg="tf" type="static_transform_publisher" name="world_to_robot0" args="0 0 0 0 0 0 map $(arg robot_name_0)/odom 100" />
-    <node pkg="tf" type="static_transform_publisher" name="world_to_robot1" args="0 0 0 0 0 0 map $(arg robot_name_1)/odom 100" />
-    <node pkg="tf" type="static_transform_publisher" name="world_to_robot2" args="0 0 0 0 0 0 map $(arg robot_name_2)/odom 100" />
+    <node pkg="tf" type="static_transform_publisher" name="map_to_robot0" args="0 0 0 0 0 0 map $(arg robot_name_0)/odom 100" />
+    <node pkg="tf" type="static_transform_publisher" name="map_to_robot1" args="0 0 0 0 0 0 map $(arg robot_name_1)/odom 100" />
+    <node pkg="tf" type="static_transform_publisher" name="map_to_robot2" args="0 0 0 0 0 0 map $(arg robot_name_2)/odom 100" />
+    <!-- <node pkg="tf" type="static_transform_publisher" name="world_to_robot0" args="0 0 0 0 0 0 world $(arg robot_name_0)/map 100" /> -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="world_to_robot1" args="0 0 0 0 0 0 world $(arg robot_name_1)/map 100" /> -->
+    <!-- <node pkg="tf" type="static_transform_publisher" name="world_to_robot2" args="0 0 0 0 0 0 world $(arg robot_name_2)/map 100" /> -->
 
     <!-- Setting robot front -->
     <node pkg="tf" type="static_transform_publisher" name="robot_1_front" args="$(arg front_distance) 0 0 0 0 0 $(arg robot_name_1)/base_footprint $(arg robot_name_1)/front 20" />
