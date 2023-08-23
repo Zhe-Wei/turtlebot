@@ -41,6 +41,10 @@ e_linear_x = 0
 e_linear_y = 0
 e_linear_z = 0
 
+k_odom = 1
+k_a = 1
+k_l = 1
+
 
 # Define a function to continuously publish velocity commands
 
@@ -301,33 +305,79 @@ def move():
 
     def linear_vel_inference():
         ### Input range
-        max_x_error = 2 # x_error 範圍
-        x_error = np.arange(-2, 2, 0.01)
-        linear_vel = np.arange(-2, 2, 0.01)
+        max_x_error = 0.875 # x_error 範圍
+        x_error = np.arange(-max_x_error, max_x_error, 0.01)
+        
+        max_linear_vel = 1 # linear_vel 範圍
+        linear_vel = np.arange(-max_linear_vel, max_linear_vel, 0.01)
 
         ### Output range
-        acc_x = np.arange(-1, 1, 0.1)
+        max_acc_x = 1 # acc_x 範圍
+        acc_x = np.arange(-max_acc_x, max_acc_x, 0.01)
 
         ### Generate Input fuzzy membership functions
-        x_error_very_neg = fuzz.trapmf(x_error, [-2, -2, -1.625, -0.75])
-        x_error_neg = fuzz.trimf(x_error, [-1, -0.5625, -0.125])
-        x_error_zero = fuzz.trimf(x_error, [-0.25, 0, 0.25])
-        x_error_pos = fuzz.trimf(x_error, [0.125, 0.5625, 1])
-        x_error_very_pos = fuzz.trapmf(x_error, [0.75, 1.625, 2, 2])
+        # x_error_very_neg = fuzz.trapmf(x_error, [-2, -2, -1.625, -0.75])
+        # x_error_neg = fuzz.trimf(x_error, [-1, -0.5625, -0.125])
+        # x_error_zero = fuzz.trimf(x_error, [-0.25, 0, 0.25])
+        # x_error_pos = fuzz.trimf(x_error, [0.125, 0.5625, 1])
+        # x_error_very_pos = fuzz.trapmf(x_error, [0.75, 1.625, 2, 2])
+        # x_error_very_neg = fuzz.trapmf(x_error, [-2, -2, -1, -0.5])
+        # x_error_neg = fuzz.trimf(x_error, [-0.75, -0.4, -0.15])
+        # x_error_zero = fuzz.trimf(x_error, [-0.25, 0, 0.25])
+        # x_error_pos = fuzz.trimf(x_error, [0.15, 0.4, 0.75])
+        # x_error_very_pos = fuzz.trapmf(x_error, [0.5, 1, 2, 2])
+
+        # x_error_very_neg = fuzz.trapmf(x_error, [-1.5, -1.5, -0.75, -0.375])
+        # x_error_neg = fuzz.trimf(x_error, [-0.5625, -0.3, -0.1125])
+        # x_error_zero = fuzz.trimf(x_error, [-0.1875, 0, 0.1875])
+        # x_error_pos = fuzz.trimf(x_error, [0.1125, 0.3, 0.5625])
+        # x_error_very_pos = fuzz.trapmf(x_error, [0.375, 0.75, 1.5, 1.5])
+        
+        
+        # -1.5/1.2, -0.75/1.2, -0.375/1.2, -0.1875/1.2, 0/1.2, 0.1875/1.2, 0.375/1.2, 0.75/1.2, 1.5/1.2
+        # x_error_very_neg = fuzz.trapmf(x_error, [-1.25, -1.25, -0.625, -0.3125])
+        # x_error_neg = fuzz.trimf(x_error, [-0.46875, -0.25, -0.09375])
+        # x_error_zero = fuzz.trimf(x_error, [-0.15625, 0, 0.15625])
+        # x_error_pos = fuzz.trimf(x_error, [0.09375, 0.25, 0.46875])
+        # x_error_very_pos = fuzz.trapmf(x_error, [0.3125, 0.625, 1.25, 1.25])
+        
+        # -1.5/1.5, -0.75/1.5, -0.375/1.5, -0.1875/1.5, 0/1.5, 0.1875/1.5, 0.375/1.5, 0.75/1.5, 1.5/1.5
+        # x_error_very_neg = fuzz.trapmf(x_error, [-1, -1, -0.5, -0.25])
+        # x_error_neg = fuzz.trimf(x_error, [-0.375, -0.2, -0.075])
+        # x_error_zero = fuzz.trimf(x_error, [-0.125, 0, 0.125])
+        # x_error_pos = fuzz.trimf(x_error, [0.075, 0.2, 0.375])
+        # x_error_very_pos = fuzz.trapmf(x_error, [0.25, 0.5, 1, 1])
+
+        # -1.5/1.75, -0.75/1.75, -0.375/1.75, -0.1875/1.75, 0/1.75, 0.1875/1.75, 0.375/1.75, 0.75/1.75, 1.5/1.75
+        x_error_very_neg = fuzz.trapmf(x_error, [-0.875, -0.875, -0.4375, -0.21875])
+        x_error_neg = fuzz.trimf(x_error, [-0.328125, -0.175, -0.065])
+        x_error_zero = fuzz.trimf(x_error, [-0.109375, 0, 0.109375])
+        x_error_pos = fuzz.trimf(x_error, [0.065, 0.175, 0.328125])
+        x_error_very_pos = fuzz.trapmf(x_error, [0.21875, 0.4375, 0.875, 0.875])
 
         linear_vel_very_neg = fuzz.trapmf(linear_vel, [-2, -2, -1.625, -0.75])
         linear_vel_neg = fuzz.trimf(linear_vel, [-1.625, -0.75, 0])
         linear_vel_zero = fuzz.trimf(linear_vel, [-0.75, 0, 0.75])
         linear_vel_pos = fuzz.trimf(linear_vel, [0, 0.75, 1.625])
         linear_vel_very_pos = fuzz.trapmf(linear_vel, [0.75, 1.625, 2, 2])
+        # linear_vel_very_neg = fuzz.trapmf(linear_vel, [-1.5, -1.5, -1.25, -0.75])
+        # linear_vel_neg = fuzz.trimf(linear_vel, [-1, -0.625, -0.25])
+        # linear_vel_zero = fuzz.trimf(linear_vel, [-0.5, 0, 0.5])
+        # linear_vel_pos = fuzz.trimf(linear_vel, [0.25, 0.625, 1])
+        # linear_vel_very_pos = fuzz.trapmf(linear_vel, [0.75, 1.25, 1.5, 1.5])
 
         ### Generate Output fuzzy membership functions
-        acc_x_very_neg = fuzz.trapmf(acc_x, [-1, -1, -0.8, -0.4])
-        acc_x_neg = fuzz.trimf(acc_x, [-0.8, -0.4, 0])
-        acc_x_zero = fuzz.trimf(acc_x, [-0.2, 0, 0.2])
-        acc_x_pos = fuzz.trimf(acc_x, [0, 0.4, 0.8])
-        acc_x_very_pos = fuzz.trapmf(acc_x, [0.4, 0.8, 1, 1])
-
+        # acc_x_very_neg = fuzz.trapmf(acc_x, [-1, -1, -0.8, -0.4])
+        # acc_x_neg = fuzz.trimf(acc_x, [-0.8, -0.4, 0])
+        # acc_x_zero = fuzz.trimf(acc_x, [-0.2, 0, 0.2])
+        # acc_x_pos = fuzz.trimf(acc_x, [0, 0.4, 0.8])
+        # acc_x_very_pos = fuzz.trapmf(acc_x, [0.4, 0.8, 1, 1])
+        acc_x_very_neg = fuzz.trapmf(acc_x, [-1, -1, -0.7, -0.5])
+        acc_x_neg = fuzz.trimf(acc_x, [-0.7, -0.45, -0.2])
+        acc_x_zero = fuzz.trimf(acc_x, [-0.25, 0, 0.25])
+        acc_x_pos = fuzz.trimf(acc_x, [0.2, 0.45, 0.7])
+        acc_x_very_pos = fuzz.trapmf(acc_x, [0.5, 0.7, 1, 1])
+        
         ### Input data for fuzzy inference and use stauration to limit the input value
         x_error_value = e_linear_x
         x_error_value = min(max(x_error_value, -max_x_error), max_x_error)  # 進行飽和運算 Ex:限制在 -2 ~ 2
@@ -388,11 +438,12 @@ def move():
             ax1.set_title('Linear Velocity=' + str(round(linear_vel_value, 2)))
             ax1.legend()
 
-            ax2.plot(linear_vel, linear_vel_very_neg, 'b', linewidth=1.5, label='Very Negative')
-            ax2.plot(linear_vel, linear_vel_neg, 'g', linewidth=1.5, label='Negative')
-            ax2.plot(linear_vel, linear_vel_zero, 'r', linewidth=1.5, label='Zero')
-            ax2.plot(linear_vel, linear_vel_pos, 'c', linewidth=1.5, label='Positive')
-            ax2.plot(linear_vel, linear_vel_very_pos, 'm', linewidth=1.5, label='Very Positive')
+
+            ax2.plot(acc_x, acc_x_very_neg, 'b', linewidth=1.5, label='Very Negative')
+            ax2.plot(acc_x, acc_x_neg, 'g', linewidth=1.5, label='Negative')
+            ax2.plot(acc_x, acc_x_zero, 'r', linewidth=1.5, label='Zero')
+            ax2.plot(acc_x, acc_x_pos, 'c', linewidth=1.5, label='Positive')
+            ax2.plot(acc_x, acc_x_very_pos, 'm', linewidth=1.5, label='Very Positive')
             ax2.set_title('Acceration Velocity')
             ax2.legend()
 
@@ -583,25 +634,39 @@ def move():
         # vel_msg.angular.z =  (slave_angular_z + ang_infernce)
 
     # k_l 表示error_y的影響力，k_a表示error_z的影響力
-    k_l = 0.5
-    k_a = 0.5
-
-    _k_a = k_a
+    # k_l 表示error_y的影響力，k_a表示error_z的影響力
+    _k_odom = k_odom
     _k_l = k_l
-    if (math.fabs(odom_linear_x) < min_vel_x):
-        _k_l = 1
-        _k_a = 1
-    if vel_msg.linear.x < -min_vel_x: # When the slave car is reversing, correct the signs of the parameters to be opposite to those when it is moving forward
-        if abs(odom_angular_z) > min_vel_theta:
-            _k_a = -k_a # _k_a parameter is positive for forward motion
-            _k_l = -k_l
+    _k_a = k_a
 
-    vel_msg.angular.z =   _k_l * e_linear_y + _k_a * math.sin(e_angular_z)
 
-    # if vel_msg.linear.x > max_vel_x:
-    #     vel_msg.linear.x = max_vel_x # Velocity limit
-    # elif vel_msg.linear.x < -max_vel_x:
-    #     vel_msg.linear.x = -max_vel_x
+    # if (math.fabs(odom_linear_x) < min_vel_x) and math.fabs(e_linear_x) < 0.1 and math.fabs(e_linear_y) < 0.1: # When the slave car is not moving, the parameters are set to 0
+    #     _k_l = 1 * _k_a
+    #     _k_a = 2 * _k_l
+
+    # if vel_msg.linear.x < -min_vel_x: # When the slave car is reversing, correct the signs of the parameters to be opposite to those when it is moving forward
+    #     if abs(odom_angular_z) > min_vel_theta:
+    #         _k_a = -k_a # _k_a parameter is positive for forward motion
+    #         _k_l = 2 * k_l
+    # k_l = 1
+    # k_a = 1
+
+    # _k_a = k_a
+    # _k_l = k_l
+    # if (math.fabs(odom_linear_x) < min_vel_x):
+    #     _k_l = 1
+    #     _k_a = 1
+    # if vel_msg.linear.x < -min_vel_x: # When the slave car is reversing, correct the signs of the parameters to be opposite to those when it is moving forward
+    #     if abs(odom_angular_z) > min_vel_theta:
+    #         _k_a = 1 * -k_a # _k_a parameter is positive for forward motion
+    #         _k_l = 2 * -k_l
+
+    vel_msg.angular.z = _k_odom * odom_angular_z + _k_l * e_linear_y + _k_a * math.sin(e_angular_z)
+
+    if vel_msg.linear.x > max_vel_x:
+        vel_msg.linear.x = max_vel_x # Velocity limit
+    elif vel_msg.linear.x < -max_vel_x:
+        vel_msg.linear.x = -max_vel_x
 
     # if vel_msg.angular.z  > max_vel_theta:
     #     vel_msg.angular.z = max_vel_theta
@@ -655,6 +720,12 @@ if __name__ == '__main__':
     max_vel_theta = rospy.get_param("~max_vel_theta", 1.0)
     min_vel_theta = rospy.get_param("~min_vel_theta", 0.05)
 
+    # Fuzzy parameters
+    k_o = rospy.get_param("~fuzzy_k_odom", 1.0)
+    k_l = rospy.get_param("~fuzzy_k_l", 1.0)
+    k_a = rospy.get_param("~fuzzy_k_a", 1.0)
+
+
     # print all parameters
     print("leader_robot_name: ", leader_robot_name)
     print("follower_robot_name: ", follower_robot_name)
@@ -666,7 +737,7 @@ if __name__ == '__main__':
     print("min_vel_x: ", min_vel_x)
     print("max_vel_theta: ", max_vel_theta)
     print("min_vel_theta: ", min_vel_theta)
-    rospy.sleep(1)
+    rospy.sleep(4)
 
     # Subscribe to the slave robot's cmd_vel
     slave_vel = rospy.Subscriber(follower_robot_name + "/cmd_vel", Twist, slave_cb)
@@ -687,7 +758,6 @@ if __name__ == '__main__':
     rate = rospy.Rate(10.0)
 
     # Get tf prefix
-
     base_frame = tf.TransformListener()
     base_to_slave = tf.TransformListener()
 
