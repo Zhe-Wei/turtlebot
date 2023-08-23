@@ -1,33 +1,110 @@
 
 <launch>
-	<arg name="leader_robot_name" value="robot_0"/>
-	<arg name="slave_robot_1" value="robot_1"/>
-    <arg name="slave_robot_2" value="robot_2"/>
+	<arg name="leader_robot_name" default="robot_0"/>
+	<arg name="slave_robot_1" default="robot_1"/>
+    <arg name="slave_robot_2" default="robot_2"/>
 
-	<arg name="slave1_x" value="-0.8"/> 
-	<arg name="slave1_y" value="0.8"/>
+	<arg name="slave1_x" default="-0.7"/> 
+	<arg name="slave1_y" default="0.7"/>
 
-    <arg name="slave2_x" value="-0.8"/>
-    <arg name="slave2_y" value="-0.8"/>
+    <arg name="slave2_x" default="-0.7"/>
+    <arg name="slave2_y" default="-0.7"/>
 
     <param name="max_vel_x" value="0.8" />
     <param name="min_vel_x" value="0.05" />
     <param name="max_vel_theta" value="0.8" />
     <param name="min_vel_theta" value="0.05" />
+
+
+    <!-- PID(true) or Fuzzy(false) -->
+    <arg name="PID" value="false" /> <!-- True(PID) or False(Fuzzy) -->
+
+    <!-- leader parameters -->
+    <arg name="move_leader" value="true"/>
+    <arg name="straight_linear_speed" default="0.5" />
     
-    <arg name="PID" value="true" /> <!-- True(PID) or False(Fuzzy) -->
-    <arg name="avoidance" value="true"/>
-    <arg name="reset_gazebo" value="true"/>
+    <arg name="circle_linear_speed" default="0.5" />
+    <arg name="circle_angular_speed" default="0.1" />
+
+    <arg name="switch_formation" value="false"/>
+    <arg name="isChangeSingleFormation" value="false"/>
+
+    <!-- pid parameters -->
+    <arg name="k_v" value="1" />
+
+    <arg name="k_odom" value="0" />
+    <arg name="k_l" value="1" />
+    <arg name="k_a" value="0" />
+    
+
+    <!-- fuzzy parameters -->
+    <arg name="fuzzy_k_odom" value="0.8" />
+    <arg name="fuzzy_k_l" value="1.5" />
+    <arg name="fuzzy_k_a" value="0.2" />
+
+    <!-- visualization -->
+    <arg name="visualization" default="true" /> <!-- True or False -->
+
+    <!-- save raw data -->
+    <arg name="save_raw_data" default="true" /> <!-- True or False -->
+
+    <!-- localization, if load map, set localization to true -->
+    <arg name="localization" default="false" /> <!-- True or False -->
+    
+    <!-- slave parameters -->
+    <arg name="avoidance" value="false"/>
+
 
     <!-- Reset gazebo : equivalent to "rosservice call /gazebo/reset_simulation" -->
+    <arg name="reset_gazebo" value="true"/>
     <node pkg="rosservice" type="rosservice" name="global_loc2" args="call --wait /gazebo/reset_simulation" />
 
     <!-- show original slave robots location -->
-	<node pkg="tf" type="static_transform_publisher" name="base_to_$(arg slave_robot_1)" args="$(arg slave1_x) $(arg slave1_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint ori_$(arg leader_robot_name)/$(arg slave_robot_1) 100" />
-    <node pkg="tf" type="static_transform_publisher" name="base_to_$(arg slave_robot_2)" args="$(arg slave2_x) $(arg slave2_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint ori_$(arg leader_robot_name)/$(arg slave_robot_2) 100" /> 
+    <node pkg="tf" type="static_transform_publisher" name="base_to_$(arg slave_robot_1)" args="$(arg slave1_x) $(arg slave1_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint $(arg leader_robot_name)/$(arg slave_robot_1) 100" />
+    <node pkg="tf" type="static_transform_publisher" name="base_to_$(arg slave_robot_2)" args="$(arg slave2_x) $(arg slave2_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint $(arg leader_robot_name)/$(arg slave_robot_2) 100" /> 
+	<!-- <node pkg="tf" type="static_transform_publisher" name="base_to_ori_$(arg slave_robot_1)" args="$(arg slave1_x) $(arg slave1_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint ori_$(arg leader_robot_name)/$(arg slave_robot_1) 100" />
+    <node pkg="tf" type="static_transform_publisher" name="base_to_ori_$(arg slave_robot_2)" args="$(arg slave2_x) $(arg slave2_y) 0 0 0 0   $(arg leader_robot_name)/base_footprint ori_$(arg leader_robot_name)/$(arg slave_robot_2) 100" />  -->
 
-    <!-- publish slave(s) expected location -->
-    <group if="true">
+
+    <!-- map server + amcl + move_base -->
+    <!-- <group if="$(arg localization)">
+        <include file="$(find turtlebot_sim)/launch/amcl_move_base.launch" >
+            <arg name="robot_name" value="robot_0" />
+            <arg name="use_rviz" value="false" />
+            <arg name="map" value="$(find turtlebot_sim)/maps/6x20.yaml" />
+        </include>
+
+        <include file="$(find turtlebot_sim)/launch/amcl_move_base.launch" >
+            <arg name="robot_name" value="robot_1" />
+            <arg name="initial_pose_x"  default="$(arg slave1_x)"/>
+            <arg name="initial_pose_y"  default="$(arg slave1_y)"/>
+            <arg name="use_rviz" value="false" />
+            <arg name="map" value="$(find turtlebot_sim)/maps/6x20.yaml" />
+        </include>
+
+        <include file="$(find turtlebot_sim)/launch/amcl_move_base.launch" >
+            <arg name="robot_name" value="robot_2" />
+            <arg name="initial_pose_x"  default="$(arg slave2_x)"/>
+            <arg name="initial_pose_y"  default="$(arg slave2_y)"/>
+            <arg name="use_rviz" value="false" />
+            <arg name="map" value="$(find turtlebot_sim)/maps/6x20.yaml" />
+        </include>
+    </group> -->
+
+    <!-- Visualization -->
+    <group if="$(arg visualization)">
+        <node pkg="turtlebot_sim" type="visualization_robots.py" name="visualization_robots" output="screen"/>
+    </group>
+
+    <!-- Save raw data -->
+    <group if="$(arg save_raw_data)">
+        <node pkg="turtlebot_sim" type="save_raw_data.py" name="save_raw_data" output="screen">
+            <param name="PID" value="$(arg PID)" />
+        </node>
+    </group>
+
+    <!-- Leader publish slave(s) expected location -->
+    <group if="$(arg switch_formation)">
         <node pkg="turtlebot_sim" type="switch_formation.py" name="switch_formation" output="screen">
             <param name="leader_robot_name" value="$(arg leader_robot_name)" />
             <param name="slave_robot_1" value="$(arg slave_robot_1)" />
@@ -36,79 +113,84 @@
             <param name="slave1_y" type="double" value="$(arg slave1_y)" />
             <param name="slave2_x" type="double" value="$(arg slave2_x)" />
             <param name="slave2_y" type="double" value="$(arg slave2_y)" />
-            <param name="setDegree" type="double" value="30" />
+            <param name="setDegree" type="int" value="30" />
+            <param name="isChangeSingleFormation" type="bool" value="$(arg isChangeSingleFormation)" />
+            <param name="r_p" type="double" value="0.5" />
             <!-- <parm name="dangerDistance" type="double" value="0.8" />
             <param name="safeDistance" type="double" value="1" /> -->
         </node>
     </group>
 
-    <!-- Move leader robot automatically -->
-    <group if="false">
+    <!-- Leader robot move automatically -->
+    <group if="$(arg move_leader)">
         <node pkg="turtlebot_sim" type="move_leader.py" name="move_leader">
             <param name="leader_robot_name" value="$(arg leader_robot_name)" />
             <!-- straight or circle -->
-            <param name="mode" value="straight" /> 
+            <param name="mode" value="circle" /> 
 
             <!-- straight -->
-            <param name="straight_linear_speed" value="0.2" />
+            <param name="straight_linear_speed" value="0.5" />
 
             <!-- circle -->
-            <param name="circle_linear_speed" value="0.5" />
+            <param name="circle_linear_speed" value="0.45" />
             <param name="circle_angular_speed" value="0.1" />
         </node>
     </group>
 
     <!-- slave_1 avoidance -->
     <group if="$(arg avoidance)">
-        <!-- <group ns="robot_1" > -->
-            <node pkg="turtlebot_sim" type="apf.py" name="apf_1" output="screen">
+        <group ns="robot_1" >
+            <!-- <node pkg="turtlebot_sim" type="apf.py" name="apf_1" output="screen">
                 <param name="follower_robot_name" value="$(arg slave_robot_1)" />
-            </node>
-            <!-- <node pkg="turtlebot_sim" type="laserTracker.py" name="avoidence_1">
+            </node> -->
+            <node pkg="turtlebot_sim" type="laserTracker.py" name="avoidence_1">
                 <param name="winSize" value="2" type="int" />
                 <param name="deltaDist" value="0.2" type="double" />
                 <param name="robot_name" value="$(arg slave_robot_1)"/>
                 <param name="scan_topic" value="scan"/>
             </node>
-            <node pkg="turtlebot_sim" type="avoidence.py" name="avoidance_1" output="screen" >
+            <node pkg="turtlebot_sim" type="avoidence.py" name="avoidance_$(arg slave_robot_1)" output="screen" >
                 <param name="avoidance_kv" type="double" value="0.2" /> 		
-                <param name="avoidance_kw" type="double" value="0.4" /> 		
-                <param name="safe_distence" type="double" value="0.8" /> 		
+                <param name="avoidance_kw" type="double" value="0.6" /> 		
+                <param name="safe_distence" type="double" value="1" /> 		
                 <param name="danger_distence" type="double" value="0.6" /> 		
-            </node> -->
-        <!-- </group> -->
+                <param name="max_vel_x" type="double" value="0.6" />
+            </node>
+        </group>
     </group>
 
 
     <!-- slave_2 avoidance -->
     <group if="$(arg avoidance)">
-        <node pkg="turtlebot_sim" type="apf.py" name="apf_2" output="screen">
+        <!-- <node pkg="turtlebot_sim" type="apf.py" name="apf_2" output="screen">
             <param name="follower_robot_name" value="$(arg slave_robot_2)" />
-        </node>
-        <!-- <group ns="robot_2">
+        </node> -->
+        <group ns="robot_2">
             <node pkg="turtlebot_sim" type="laserTracker.py" name="avoidence_2">
                 <param name="winSize" value="2" type="int" />
                 <param name="deltaDist" value="0.2" type="double" />
                 <param name="robot_name" value="$(arg slave_robot_2)"/>
                 <param name="scan_topic" value="scan"/>
             </node>
-            <node pkg="turtlebot_sim" type="avoidence.py" name="avoidance_2" output="screen" >
-                <param name="avoidance_kv" type="double" value="0.2" /> 		
-                <param name="avoidance_kw" type="double" value="0.4" /> 		
-                <param name="safe_distence" type="double" value="0.6" /> 		
-                <param name="danger_distence" type="double" value="0.3" /> 		
+            <node pkg="turtlebot_sim" type="avoidence.py" name="avoidance_$(arg slave_robot_2)" output="screen" >
+                <param name="avoidance_kv" type="double" value="0.2" /> 	
+                <param name="avoidance_kw" type="double" value="0.6" /> 			
+                <param name="safe_distence" type="double" value="1" /> 		
+                <param name="danger_distence" type="double" value="0.6" /> 		
+                <param name="max_vel_x" type="double" value="0.6" />	
             </node>
-        </group> -->
+        </group>
     </group>
 
     <!-- slave_1 PID-->
-    <node if="$(arg PID)" pkg="turtlebot_sim" type="leader_follower_formation_pid.py" name="leader_follower1_formation_pid" output="screen" >
+    <node if="$(arg PID)" pkg="turtlebot_sim" type="leader_follower_formation_pid.py" name="leader_$(arg slave_robot_1)_formation_pid" output="screen" >
         <param name = "tf_prefix" value="$(arg slave_robot_1)"/>
         <param name="leader_robot_name" value="$(arg leader_robot_name)" />
         <param name="follower_robot_name" value="$(arg slave_robot_1)" />
-        <param name="k_v" type="double" value="1.5" />
-        <param name="k_l" type="double" value="1.0" />
-        <param name="k_a" type="double" value="1.0" />
+        <param name="k_odom" type="double" value="$(arg k_odom)" />
+        <param name="k_v" type="double" value="$(arg k_v)" />
+        <param name="k_l" type="double" value="$(arg k_l)" />
+        <param name="k_a" type="double" value="$(arg k_a)" />
         <param name="slave1_x" type="double" value="$(arg slave1_x)" />
         <param name="slave1_y" type="double" value="$(arg slave1_y)" />
         <param name="base_to_slave" type="string" value="/$(arg slave_robot_1)" /> <!-- slave target的topic名稱 -->
@@ -118,13 +200,14 @@
 
 
     <!-- slave_2 PID -->
-    <node if="$(arg PID)" pkg="turtlebot_sim" type="leader_follower_formation_pid.py" name="leader_follower2_formation_fuzzy" output="screen" >
+    <node if="$(arg PID)" pkg="turtlebot_sim" type="leader_follower_formation_pid.py" name="leader_$(arg slave_robot_2)_formation_fuzzy" output="screen" >
         <param name = "tf_prefix" value="$(arg slave_robot_2)"/>
         <param name="leader_robot_name" value="$(arg leader_robot_name)" />
         <param name="follower_robot_name" value="$(arg slave_robot_2)" />
-        <param name="k_v" type="double" value="1.5" />
-        <param name="k_l" type="double" value="1.0" />
-        <param name="k_a" type="double" value="1.0" />
+        <param name="k_odom" type="double" value="$(arg k_odom)" />
+        <param name="k_v" type="double" value="$(arg k_v)" />
+        <param name="k_l" type="double" value="$(arg k_l)" />
+        <param name="k_a" type="double" value="$(arg k_a)" />
         <param name="slave2_x" type="double" value="$(arg slave2_x)" />
         <param name="slave2_y" type="double" value="$(arg slave2_y)" />
         <param name="base_to_slave" type="string" value="/$(arg slave_robot_2)" /> <!-- slave target的topic名稱 -->
@@ -134,26 +217,32 @@
 
 
     <!-- slave_1 fuzzy -->
-    <node unless="$(arg PID)" pkg="turtlebot_sim" type="leader_follower_formation_fuzzy.py" name="leader_follower1_formation_fuzzy" output="screen" >
+    <node unless="$(arg PID)" pkg="turtlebot_sim" type="leader_follower_formation_fuzzy.py" name="leader_$(arg slave_robot_1)_formation_fuzzy" output="screen" >
         <param name = "tf_prefix" value="$(arg slave_robot_1)"/>
         <param name="leader_robot_name" value="$(arg leader_robot_name)" />
         <param name="follower_robot_name" value="$(arg slave_robot_1)" />
+        <param name="fuzzy_k_odom" type="double" value="$(arg fuzzy_k_odom)" />
+        <param name="fuzzy_k_l" type="double" value="$(arg fuzzy_k_l)" />
+        <param name="fuzzy_k_a" type="double" value="$(arg fuzzy_k_a)" />
         <param name="slave1_x" type="double" value="$(arg slave1_x)" />
         <param name="slave1_y" type="double" value="$(arg slave1_y)" />
         <param name="base_to_slave" type="string" value="/$(arg slave_robot_1)" />
         <param name="base_frame" type="string" value="base_footprint" />
-        <remap from="$(arg slave_robot_1)/cmd_vel_ori" to="robot_1/cmd_vel" if="$(eval avoidance==false)"/>
+        <remap from="$(arg slave_robot_1)/cmd_vel_ori" to="$(arg slave_robot_1)/cmd_vel" if="$(eval avoidance==false)"/>
     </node> 
 
     <!-- slave_2 fuzzy -->
-    <node unless="$(arg PID)" pkg="turtlebot_sim" type="leader_follower_formation_fuzzy.py" name="leader_follower2_formation_pid" output="screen" >
+    <node unless="$(arg PID)" pkg="turtlebot_sim" type="leader_follower_formation_fuzzy.py" name="leader_$(arg slave_robot_1)_formation_pid" output="screen" >
         <param name = "tf_prefix" value="$(arg slave_robot_2)"/>
         <param name="leader_robot_name" value="$(arg leader_robot_name)" />
         <param name="follower_robot_name" value="$(arg slave_robot_2)" />
+        <param name="fuzzy_k_odom" type="double" value="$(arg fuzzy_k_odom)" />
+        <param name="fuzzy_k_l" type="double" value="$(arg fuzzy_k_l)" />
+        <param name="fuzzy_k_a" type="double" value="$(arg fuzzy_k_a)" />
         <param name="slave2_x" type="double" value="$(arg slave2_x)" />
         <param name="slave2_y" type="double" value="$(arg slave2_y)" />
         <param name="base_to_slave" type="string" value="/$(arg slave_robot_2)" />
         <param name="base_frame" type="string" value="base_footprint" />
-        <remap from="$(arg slave_robot_2)/cmd_vel_ori" to="robot_2/cmd_vel" if="$(eval avoidance==false)"/>
+        <remap from="$(arg slave_robot_2)/cmd_vel_ori" to="$(arg slave_robot_2)/cmd_vel" if="$(eval avoidance==false)"/>
     </node>
 </launch>
