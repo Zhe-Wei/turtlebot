@@ -6,6 +6,16 @@ import tf
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import TransformStamped
 
+# 初始和當前 /tag_0 的位置
+tag_0_initial_position = None
+tag_0_current_position = None
+
+# 模式標誌
+switching_mode = False
+min_path_width = 999
+current_priority = None
+
+
 def deg2index(deg, scan_data):
     return math.floor(math.radians(deg) / scan_data.angle_increment)
 
@@ -70,6 +80,8 @@ def publish_original_tf(tf_listener, tf_broadcaster, original_frame, new_frame):
         pass
 
 def lidar_callback(scan_data):
+    global current_priority
+
     path_width = getPathWidth(scan_data)
     rospy.loginfo(f"Path width: {path_width} meters")
 
@@ -88,10 +100,41 @@ def lidar_callback(scan_data):
         # 計算y軸寬度總和
         y_width_sum = abs(tag1_pos[1]) + abs(tag2_pos[1]) + 0.15
         rospy.loginfo(f"y_width_sum: {y_width_sum} meters")
-        if y_width_sum > path_width:
 
-            # get priority
-            priority = getPriotity(real_tag1_pos, real_tag2_pos)
+        # get priority
+        priority = getPriotity(real_tag1_pos, real_tag2_pos)
+
+
+        global switching_mode
+        global min_path_width
+
+        if y_width_sum > path_width or switching_mode:
+            if not switching_mode:
+                current_priority = getPriotity(real_tag1_pos, real_tag2_pos)
+                switching_mode = True
+            # 切換模式
+            switching_mode = True
+            min_path_width = min(min_path_width, path_width)
+            rospy.loginfo(f"Switching mode, min_path_width: {min_path_width} meters")
+
+            ## 獲取 /tag_0 的位置
+            global tag_0_initial_position
+            global tag_0_current_position
+            try:
+                tag_0_current_position, _ = tf_listener.lookupTransform('/desktop_camera', '/tag_0', rospy.Time(0))
+                if tag_0_initial_position is None:
+                    tag_0_initial_position = tag_0_current_position
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                pass
+
+            if tag_0_initial_position is not None and tag_0_current_position is not None:
+                distance_moved = math.sqrt(sum((p1 - p2) ** 2 for p1, p2 in zip(tag_0_initial_position, tag_0_current_position)))
+                rospy.loginfo(f"Distance moved: {distance_moved} meters")
+                if distance_moved > 1.75:  # 超過1米
+                    switching_mode = False
+                    min_path_width = 999
+                    current_priority = None
+                    rospy.loginfo("Resetting switching mode")
 
             # tmp
             tmp1_trans = list(tag1_pos)
@@ -105,10 +148,10 @@ def lidar_callback(scan_data):
             l_2 = math.sqrt((tag2_pos[0])**2 + (tag2_pos[1])**2)
 
 
-            d_i = path_width - r_p
-            d_j = path_width - r_p
+            d_i = min_path_width - r_p
+            d_j = min_path_width - r_p
 
-            if priority == 2:
+            if current_priority == 2:
                 # 更新tag2的位置
                 tmp2_trans[0] = tag2_pos[0]
                 tmp2_trans[1] = tag2_pos[1] + d_i
@@ -119,25 +162,31 @@ def lidar_callback(scan_data):
                 # tmp2_trans[0] = math.sqrt((2*r_p)**2 - (d_i+d_j)**2)
                 tmp1_trans[0] = tag2_pos[0] - 1.5*r_p  
                 tmp1_trans[1] = tag1_pos[1] - d_i
-                if (tmp1_trans[1] < 0):
-                    tmp1_trans[1] = 0
-            elif priority == 1:
+                # if (tmp1_trans[1] < 0):
+                #     tmp1_trans[1] = 0
+                tmp1_trans[1] = 0.12
+                tmp2_trans[1] = -0.12
+            elif current_priority == 1:
                 tmp1_trans[0] = tag1_pos[0]
                 tmp1_trans[1] = tag1_pos[1] - d_i
-                if (tmp1_trans[1] < 0):
-                    tmp1_trans[1] = 0
+                # if (tmp1_trans[1] < 0):
+                #     tmp1_trans[1] = 0
 
                 tmp2_trans[0] = tag2_pos[0] - 1.5*r_p  
                 tmp2_trans[1] = tag2_pos[1] + d_i
 
+                
+                tmp1_trans[1] = 0.12
+                tmp2_trans[1] = -0.12
             # print
-            print(tmp1_trans)
-            print(tmp2_trans)
+            # print(tmp1_trans)
+            # print(tmp2_trans)
 
             adjust_and_publish_tf(tf_listener, tf_broadcaster, '/ori_tag_0/tag_1', '/tag_0/tag_1', tmp1_trans)
             adjust_and_publish_tf(tf_listener, tf_broadcaster, '/ori_tag_0/tag_2', '/tag_0/tag_2', tmp2_trans)
         else:
             rospy.loginfo("Using original TF positions")
+           
             publish_original_tf(tf_listener, tf_broadcaster, '/ori_tag_0/tag_1', '/tag_0/tag_1')
             publish_original_tf(tf_listener, tf_broadcaster, '/ori_tag_0/tag_2', '/tag_0/tag_2')
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
